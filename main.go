@@ -68,7 +68,7 @@ func main() {
 	rand.Seed(int64(time.Now().Nanosecond()))
 
 	setupECS()
-	wnd := g.NewMasterWindow("App", 1200, 900, g.MasterWindowFlagsNotResizable, nil)
+	wnd := g.NewMasterWindow("App", 1000, 500, 0, nil)
 	wnd.Main(loop)
 	// renderSystem()
 }
