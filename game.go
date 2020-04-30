@@ -1,18 +1,16 @@
 package main
 
 import (
-	"time"
-
 	"github.com/bytearena/ecs"
 )
 
 type stats struct {
-	maxHealth   int
-	damage      int
-	cooldown    time.Duration
-	staminaCost int
-	dodge       int
-	heal        int
+	MaxHealth   int32
+	Damage      int32
+	Cooldown    float32 `imgui:"%.1f ms"`
+	StaminaCost int32
+	Dodge       int32
+	Heal        int32
 }
 
 func setupECS() {
@@ -31,11 +29,11 @@ func createTank(n string) *ecs.Entity {
 	e := ecsManager.NewEntity()
 	ecsManager.AddComponent(e, &PositionComponent{X: 1, Y: 2})
 	ecsManager.AddComponent(e, &stats{
-		maxHealth:   500,
-		damage:      90,
-		cooldown:    4000 * time.Millisecond,
-		staminaCost: 90,
-		dodge:       10,
+		MaxHealth:   500,
+		Damage:      90,
+		Cooldown:    4000,
+		StaminaCost: 90,
+		Dodge:       10,
 	})
 	return e
 }

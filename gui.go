@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"reflect"
+	"strings"
 
 	g "github.com/AllenDang/giu"
 	"github.com/bytearena/ecs"
@@ -67,17 +68,27 @@ func entityComponentLayout(e *ecs.Entity, c *ecs.Component) g.Layout {
 			ft := f.Type
 			vf := val.Field(i)
 			kind := ft.Kind()
+
+			tag, ok := f.Tag.Lookup("imgui")
+			format := ""
+			if ok {
+				format = strings.Split(tag, ",")[0]
+			}
+
 			switch kind {
 			case reflect.String:
 				w := g.InputText(f.Name, 0, vf.Addr().Interface().(*string))
 				l = append(l, w)
 			case reflect.Float32:
-				l = append(l, DragFloat(f.Name, vf.Addr().Interface().(*float32)))
+				format = stringOrDefault(format, "%.3f")
+				w := DragFloatV(f.Name, vf.Addr().Interface().(*float32), 1, 0, 0, format, 1)
+				l = append(l, w)
 			case reflect.Int32:
-				w := g.DragInt(f.Name, vf.Addr().Interface().(*int32))
+				format = stringOrDefault(format, "%d")
+				w := g.DragIntV(f.Name, vf.Addr().Interface().(*int32), 1.0, 0, 0, format)
 				l = append(l, w)
 			default:
-				w := g.Label(fmt.Sprintf("%s type is not supported", kind.String()))
+				w := LabelText(f.Name, fmt.Sprintf("%s isn't not supported", kind.String()))
 				l = append(l, w)
 			}
 		}
@@ -85,4 +96,11 @@ func entityComponentLayout(e *ecs.Entity, c *ecs.Component) g.Layout {
 	}
 
 	return l
+}
+
+func stringOrDefault(val, def string) string {
+	if val != "" {
+		return val
+	}
+	return def
 }

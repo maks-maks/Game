@@ -31,3 +31,19 @@ func DragFloatV(label string, value *float32, speed float32, min, max float32, f
 		power:  power,
 	}
 }
+
+type LabelTextWidget struct {
+	label string
+	text  string
+}
+
+func (d *LabelTextWidget) Build() {
+	imgui.LabelText(d.label, d.text)
+}
+
+func LabelText(label, text string) *LabelTextWidget {
+	return &LabelTextWidget{
+		label: label,
+		text:  text,
+	}
+}
