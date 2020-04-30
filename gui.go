@@ -1,0 +1,88 @@
+package main
+
+import (
+	"fmt"
+	"reflect"
+
+	g "github.com/AllenDang/giu"
+	"github.com/bytearena/ecs"
+)
+
+var demo = false
+var curEntityID ecs.EntityID = 0
+
+func leftPanel() *g.Layout {
+	entities := ecsManager.Query(0).Entities()
+	items := make([]string, 0, len(entities))
+
+	for _, v := range entities {
+		items = append(items, fmt.Sprintf("%d", v.ID))
+	}
+
+	return &g.Layout{
+		g.ListBox("Entities", items,
+			func(i int) {
+				curEntityID = entities[i].ID
+			},
+			func(selectedIndex int) {}),
+	}
+}
+
+func rightPanel() *g.Layout {
+	q := ecsManager.GetEntityByID(curEntityID)
+	if q == nil {
+		return &g.Layout{}
+	}
+
+	l := make(g.Layout, 1)
+	l[0] = g.Button("dummy", func() {})
+	i := 0
+
+	for _, component := range ecsManager.components {
+		if q.Entity.HasComponent(component) {
+			n := g.TreeNode(ecsManager.ComponentName(component), g.TreeNodeFlagsDefaultOpen, entityComponentLayout(q.Entity, component))
+			l = append(l, n)
+
+			i++
+		}
+	}
+
+	return &l
+}
+
+func entityComponentLayout(e *ecs.Entity, c *ecs.Component) g.Layout {
+	d, _ := e.GetComponentData(c)
+
+	val := reflect.ValueOf(d)
+	val = reflect.Indirect(val)
+
+	typ := val.Type()
+
+	l := make(g.Layout, 0)
+
+	switch typ.Kind() {
+	case reflect.Struct:
+		for i := 0; i < typ.NumField(); i++ {
+			f := typ.Field(i)
+			ft := f.Type
+			vf := val.Field(i)
+			kind := ft.Kind()
+			switch kind {
+			case reflect.String:
+				w := g.InputText(f.Name, 0, vf.Addr().Interface().(*string))
+				l = append(l, w)
+			case reflect.Float32:
+				l = append(l, DragFloat(f.Name, vf.Addr().Interface().(*float32)))
+			case reflect.Int32:
+				w := g.DragInt(f.Name, vf.Addr().Interface().(*int32))
+				l = append(l, w)
+			default:
+				w := g.Label(fmt.Sprintf("%s type is not supported", kind.String()))
+				l = append(l, w)
+			}
+		}
+	default:
+	}
+
+	return l
+}
