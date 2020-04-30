@@ -35,16 +35,12 @@ func rightPanel() *g.Layout {
 		return &g.Layout{}
 	}
 
-	l := make(g.Layout, 1)
-	l[0] = g.Button("dummy", func() {})
-	i := 0
+	l := make(g.Layout, 0)
 
 	for _, component := range ecsManager.components {
 		if q.Entity.HasComponent(component) {
 			n := g.TreeNode(ecsManager.ComponentName(component), g.TreeNodeFlagsDefaultOpen, entityComponentLayout(q.Entity, component))
 			l = append(l, n)
-
-			i++
 		}
 	}
 
