@@ -4,20 +4,23 @@ import (
 	"github.com/bytearena/ecs"
 )
 
-type stats struct {
+type StatsComponent struct {
 	MaxHealth   int32
 	Damage      int32
 	Cooldown    float32 `imgui:"%.1f ms"`
 	StaminaCost int32
+	Stamina     int32
 	Dodge       int32
 	Heal        int32
+	Health      int32
+	Reload      float32 `imgui:"%.1f ms"`
 }
 
 func setupECS() {
 	ecsManager = NewECSManager()
 
 	ecsManager.RegisterComponent("position", &PositionComponent{})
-	ecsManager.RegisterComponent("stats", &stats{})
+	ecsManager.RegisterComponent("stats", &StatsComponent{})
 	ecsManager.RegisterComponent("target", &TargetComponent{})
 
 	createTank("Frederik")
@@ -30,10 +33,12 @@ func setupECS() {
 func createTank(n string) *ecs.Entity {
 	e := ecsManager.NewEntity()
 	ecsManager.AddComponent(e, &PositionComponent{X: 1, Y: 2})
-	ecsManager.AddComponent(e, &stats{
+	ecsManager.AddComponent(e, &StatsComponent{
 		MaxHealth:   500,
+		Health:      500,
 		Damage:      90,
 		Cooldown:    4000,
+		Stamina:     100,
 		StaminaCost: 90,
 		Dodge:       10,
 	})
@@ -59,6 +64,45 @@ func (s *targetingSystem) Update(dt float32) {
 			if t.ID != e.ID {
 				data.TargetID = t.ID
 			}
+		}
+	}
+}
+
+type battleSystem struct{}
+
+func (s *battleSystem) Update(dt float32) {
+	targetC := ecsManager.componentMap["target"]
+	statC := ecsManager.componentMap["stats"]
+
+	query := ecsManager.Query(ecs.BuildTag(targetC, statC))
+
+	for _, item := range query {
+		currentTarget := item.Components[targetC].(*TargetComponent)
+		stats := item.Components[statC].(*StatsComponent)
+
+		if currentTarget.TargetID == 0 {
+			continue
+		}
+
+		target := ecsManager.GetEntityByID(currentTarget.TargetID, statC)
+		targetStats := target.Components[statC].(*StatsComponent)
+
+		if stats.Reload < stats.Cooldown {
+			stats.Reload = stats.Reload + dt
+			continue
+		}
+		if stats.Stamina < stats.StaminaCost {
+			stats.Stamina = stats.Stamina + 50
+			stats.Reload = 0
+			continue
+		}
+
+		targetStats.Health = targetStats.Health - stats.Damage
+		stats.Stamina = stats.Stamina - stats.StaminaCost
+		stats.Reload = 0
+		if targetStats.Health <= 0 {
+			ecsManager.DisposeEntity(item.Entity)
+			currentTarget.TargetID = 0
 		}
 	}
 }

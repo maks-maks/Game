@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/AllenDang/giu"
 	g "github.com/AllenDang/giu"
 	"github.com/AllenDang/giu/imgui"
 	"github.com/bytearena/ecs"
@@ -30,6 +31,7 @@ func gameCanvas() *g.Layout {
 		// g.Label("Canvas demo"),
 		g.Custom(func() {
 			pComp := ecsManager.componentMap["position"]
+			sComp := ecsManager.componentMap["stats"]
 			q := ecsManager.Query(ecs.BuildTag(pComp))
 
 			for _, item := range q {
@@ -38,9 +40,26 @@ func gameCanvas() *g.Layout {
 
 				canvas := g.GetCanvas()
 				pos := g.GetCursorScreenPos()
-				p1 := pos.Add(image.Pt(int(data.X), int(data.Y)))
-				color := color.RGBA{200, 75, 75, 255}
-				canvas.AddCircleFilled(p1, 50, color)
+				p0 := pos.Add(image.Pt(int(data.X), int(data.Y)))
+				circleColor := color.RGBA{255, 255, 255, 255}
+				r := float32(50)
+				canvas.AddCircleFilled(p0, r, circleColor)
+
+				// Healthbar
+				s, ok := item.Entity.GetComponentData(sComp)
+				if ok {
+					stats := s.(*StatsComponent)
+					width := 100 * stats.Health / stats.MaxHealth
+
+					pMin := p0.Add(image.Pt(-50, -60))
+					pMax := pMin.Add(image.Pt(int(width), 10))
+					hbColor := color.RGBA{200, 0, 0, 255}
+					canvas.AddRectFilled(pMin, pMax, hbColor, 0, giu.CornerFlags_All)
+
+					textPos := pMin
+					textColor := color.RGBA{0, 0, 0, 255}
+					canvas.AddText(textPos, textColor, fmt.Sprintf("%d", stats.Health))
+				}
 			}
 		}),
 	}
@@ -50,7 +69,10 @@ func loop() {
 	size := g.Context.GetPlatform().DisplaySize()
 	g.SingleWindow("main window", g.Layout{
 		// g.Button("Show demo window", func() { demo = true }),
-		g.Checkbox("Show demo window", &demo, func() {}),
+		g.Line(
+			g.Checkbox("Show demo window", &demo, func() {}),
+			g.SliderInt("Delay", &delayMs, 10, 500, "%d ms"),
+		),
 		g.SplitLayout("Split", g.DirectionHorizontal, false, 300,
 			leftPanel(),
 			g.SplitLayout("Split2", g.DirectionHorizontal, false, size[0]-600,
@@ -72,6 +94,7 @@ func main() {
 
 	systems := []System{
 		&targetingSystem{},
+		&battleSystem{},
 	}
 
 	go func() {
