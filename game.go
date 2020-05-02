@@ -18,11 +18,13 @@ func setupECS() {
 
 	ecsManager.RegisterComponent("position", &PositionComponent{})
 	ecsManager.RegisterComponent("stats", &stats{})
+	ecsManager.RegisterComponent("target", &TargetComponent{})
 
 	createTank("Frederik")
+	createTank("Frederik2")
 
-	e2 := ecsManager.NewEntity()
-	ecsManager.AddComponent(e2, &PositionComponent{X: 10, Y: 15})
+	// e2 := ecsManager.NewEntity()
+	// ecsManager.AddComponent(e2, &PositionComponent{X: 10, Y: 15})
 }
 
 func createTank(n string) *ecs.Entity {
@@ -35,5 +37,28 @@ func createTank(n string) *ecs.Entity {
 		StaminaCost: 90,
 		Dodge:       10,
 	})
+	ecsManager.AddComponent(e, &TargetComponent{})
 	return e
+}
+
+type TargetComponent struct {
+	TargetID ecs.EntityID
+}
+
+type targetingSystem struct{}
+
+func (s *targetingSystem) Update(dt float32) {
+	entities := ecsManager.Query(ecs.BuildTag(ecsManager.componentMap["target"])).Entities()
+
+	for _, e := range entities {
+		d, _ := e.GetComponentData(ecsManager.componentMap["target"])
+		data := d.(*TargetComponent)
+
+		targets := ecsManager.Query(ecs.BuildTag(ecsManager.componentMap["stats"])).Entities()
+		for _, t := range targets {
+			if t.ID != e.ID {
+				data.TargetID = t.ID
+			}
+		}
+	}
 }

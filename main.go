@@ -69,6 +69,26 @@ func main() {
 
 	setupECS()
 	wnd := g.NewMasterWindow("App", 1000, 500, 0, nil)
+
+	systems := []System{
+		&targetingSystem{},
+	}
+
+	go func() {
+		t := time.Now()
+		for {
+			dt := float32(time.Since(t).Milliseconds())
+			t = time.Now()
+
+			for _, s := range systems {
+				s.Update(dt)
+			}
+
+			time.Sleep(time.Duration(delayMs) * time.Millisecond)
+			g.Update()
+		}
+	}()
+
 	wnd.Main(loop)
 	// renderSystem()
 }

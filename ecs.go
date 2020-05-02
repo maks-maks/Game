@@ -76,3 +76,7 @@ func (m *ECSManager) componentByData(componentData interface{}) (*ecs.Component,
 	}
 	return c, nil
 }
+
+type System interface {
+	Update(dt float32)
+}
