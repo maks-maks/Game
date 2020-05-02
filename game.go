@@ -80,11 +80,12 @@ func (s *battleSystem) Update(dt float32) {
 		currentTarget := item.Components[targetC].(*TargetComponent)
 		stats := item.Components[statC].(*StatsComponent)
 
-		if currentTarget.TargetID == 0 {
+		target := ecsManager.GetEntityByID(currentTarget.TargetID, statC)
+		if target == nil {
+			currentTarget.TargetID = 0
 			continue
 		}
 
-		target := ecsManager.GetEntityByID(currentTarget.TargetID, statC)
 		targetStats := target.Components[statC].(*StatsComponent)
 
 		if stats.Reload < stats.Cooldown {
@@ -101,8 +102,7 @@ func (s *battleSystem) Update(dt float32) {
 		stats.Stamina = stats.Stamina - stats.StaminaCost
 		stats.Reload = 0
 		if targetStats.Health <= 0 {
-			ecsManager.DisposeEntity(item.Entity)
-			currentTarget.TargetID = 0
+			ecsManager.DisposeEntity(target.Entity)
 		}
 	}
 }
