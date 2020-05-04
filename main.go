@@ -42,16 +42,22 @@ func gameCanvas() *g.Layout {
 				pos := g.GetCursorScreenPos()
 				p0 := pos.Add(image.Pt(int(data.X), int(data.Y)))
 				circleColor := color.RGBA{255, 255, 255, 255}
-				r := float32(50)
-				canvas.AddCircleFilled(p0, r, circleColor)
-
+				r := 25
+				canvas.AddCircleFilled(p0, float32(r), circleColor)
+				canvas.AddRectFilled(
+					p0.Add(image.Pt(-3, 20)), // top left
+					p0.Add(image.Pt(3, 150)), // bottom right
+					circleColor,              // color
+					0,
+					giu.CornerFlags_All,
+				)
 				// Healthbar
 				s, ok := item.Entity.GetComponentData(sComp)
 				if ok {
 					stats := s.(*StatsComponent)
-					width := 100 * stats.Health / stats.MaxHealth
+					width := r * 2 * int(stats.Health) / int(stats.MaxHealth)
 
-					pMin := p0.Add(image.Pt(-50, -60))
+					pMin := p0.Add(image.Pt(-r, -r-5))
 					pMax := pMin.Add(image.Pt(int(width), 10))
 					hbColor := color.RGBA{200, 0, 0, 255}
 					canvas.AddRectFilled(pMin, pMax, hbColor, 0, giu.CornerFlags_All)

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"math/rand"
+
 	"github.com/bytearena/ecs"
 )
 
@@ -22,9 +24,9 @@ func setupECS() {
 	ecsManager.RegisterComponent("position", &PositionComponent{})
 	ecsManager.RegisterComponent("stats", &StatsComponent{})
 	ecsManager.RegisterComponent("target", &TargetComponent{})
-
-	createTank("Frederik")
-	createTank("Frederik2")
+	for i := 1; i < 4; i++ {
+		createTank("Frederik")
+	}
 
 	// e2 := ecsManager.NewEntity()
 	// ecsManager.AddComponent(e2, &PositionComponent{X: 10, Y: 15})
@@ -32,12 +34,15 @@ func setupECS() {
 
 func createTank(n string) *ecs.Entity {
 	e := ecsManager.NewEntity()
-	ecsManager.AddComponent(e, &PositionComponent{X: 1, Y: 2})
+	ecsManager.AddComponent(e, &PositionComponent{
+		X: (rand.Float32() * 300) + 100,
+		Y: (rand.Float32() * 200) + 100,
+	})
 	ecsManager.AddComponent(e, &StatsComponent{
 		MaxHealth:   500,
 		Health:      500,
 		Damage:      90,
-		Cooldown:    4000,
+		Cooldown:    1000,
 		Stamina:     100,
 		StaminaCost: 90,
 		Dodge:       10,
