@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math"
 	"math/rand"
 
 	"github.com/bytearena/ecs"
@@ -24,7 +25,7 @@ func setupECS() {
 	ecsManager.RegisterComponent("position", &PositionComponent{})
 	ecsManager.RegisterComponent("stats", &StatsComponent{})
 	ecsManager.RegisterComponent("target", &TargetComponent{})
-	for i := 1; i < 4; i++ {
+	for i := 1; i < 101; i++ {
 		createTank("Frederik")
 	}
 
@@ -73,19 +74,53 @@ func (s *targetingSystem) Update(dt float32) {
 	}
 }
 
+type movementSystem struct{}
+
+func (s *movementSystem) Update(dt float32) {
+	targetC := ecsManager.componentMap["target"]
+	positionC := ecsManager.componentMap["position"]
+	query := ecsManager.Query(ecs.BuildTag(targetC, positionC))
+	for _, item := range query {
+		position := item.Components[positionC].(*PositionComponent)
+		currentTarget := item.Components[targetC].(*TargetComponent)
+
+		target := ecsManager.GetEntityByID(currentTarget.TargetID, positionC)
+		if target == nil {
+			currentTarget.TargetID = 0
+			continue
+		}
+
+		targetPosition := target.Components[positionC].(*PositionComponent)
+		x1, y1, x2, y2 := position.X, position.Y, targetPosition.X, targetPosition.Y
+
+		d2 := ((x2 - x1) * (x2 - x1)) + ((y2 - y1) * (y2 - y1))
+		d := float32(math.Sqrt(float64(d2)))
+
+		if d < 75 {
+			continue
+		}
+
+		position.X += (x2 - x1) / d * dt / 30
+		position.Y += (y2 - y1) / d * dt / 30
+	}
+
+}
+
 type battleSystem struct{}
 
 func (s *battleSystem) Update(dt float32) {
 	targetC := ecsManager.componentMap["target"]
 	statC := ecsManager.componentMap["stats"]
+	positionC := ecsManager.componentMap["position"]
 
-	query := ecsManager.Query(ecs.BuildTag(targetC, statC))
+	query := ecsManager.Query(ecs.BuildTag(targetC, statC, positionC))
 
 	for _, item := range query {
 		currentTarget := item.Components[targetC].(*TargetComponent)
 		stats := item.Components[statC].(*StatsComponent)
+		position := item.Components[positionC].(*PositionComponent)
 
-		target := ecsManager.GetEntityByID(currentTarget.TargetID, statC)
+		target := ecsManager.GetEntityByID(currentTarget.TargetID, statC, positionC)
 		if target == nil {
 			currentTarget.TargetID = 0
 			continue
@@ -103,6 +138,13 @@ func (s *battleSystem) Update(dt float32) {
 			continue
 		}
 
+		targetPosition := target.Components[positionC].(*PositionComponent)
+		x1, y1, x2, y2 := position.X, position.Y, targetPosition.X, targetPosition.Y
+		d2 := ((x2 - x1) * (x2 - x1)) + ((y2 - y1) * (y2 - y1))
+		d := math.Sqrt(float64(d2))
+		if d > 75 {
+			continue
+		}
 		targetStats.Health = targetStats.Health - stats.Damage
 		stats.Stamina = stats.Stamina - stats.StaminaCost
 		stats.Reload = 0
