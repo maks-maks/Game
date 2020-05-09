@@ -32,16 +32,21 @@ func gameCanvas() *g.Layout {
 		g.Custom(func() {
 			pComp := ecsManager.componentMap["position"]
 			sComp := ecsManager.componentMap["stats"]
-			q := ecsManager.Query(ecs.BuildTag(pComp))
+			q := ecsManager.Query(ecs.BuildTag(pComp, sComp))
 
 			for _, item := range q {
-				// d, _ := e.GetComponentData(ecsManager.componentMap["position"])
 				data := item.Components[pComp].(*PositionComponent)
+				stats := item.Components[sComp].(*StatsComponent)
 
 				canvas := g.GetCanvas()
 				pos := g.GetCursorScreenPos()
 				p0 := pos.Add(image.Pt(int(data.X), int(data.Y)))
-				circleColor := color.RGBA{255, 255, 255, 255}
+				var circleColor color.RGBA
+				if stats.AttackRange > 100 {
+					circleColor = color.RGBA{200, 0, 100, 255}
+				} else {
+					circleColor = color.RGBA{255, 255, 255, 255}
+				}
 				r := 25
 				canvas.AddCircleFilled(p0, float32(r), circleColor)
 				canvas.AddRectFilled(
@@ -52,20 +57,16 @@ func gameCanvas() *g.Layout {
 					giu.CornerFlags_All,
 				)
 				// Healthbar
-				s, ok := item.Entity.GetComponentData(sComp)
-				if ok {
-					stats := s.(*StatsComponent)
-					width := r * 2 * int(stats.Health) / int(stats.MaxHealth)
+				width := r * 2 * int(stats.Health) / int(stats.MaxHealth)
 
-					pMin := p0.Add(image.Pt(-r, -r-5))
-					pMax := pMin.Add(image.Pt(int(width), 10))
-					hbColor := color.RGBA{200, 0, 0, 255}
-					canvas.AddRectFilled(pMin, pMax, hbColor, 0, giu.CornerFlags_All)
+				pMin := p0.Add(image.Pt(-r, -r-5))
+				pMax := pMin.Add(image.Pt(int(width), 10))
+				hbColor := color.RGBA{200, 0, 0, 255}
+				canvas.AddRectFilled(pMin, pMax, hbColor, 0, giu.CornerFlags_All)
 
-					textPos := pMin
-					textColor := color.RGBA{0, 0, 0, 255}
-					canvas.AddText(textPos, textColor, fmt.Sprintf("%d", stats.Health))
-				}
+				textPos := pMin
+				textColor := color.RGBA{0, 0, 0, 255}
+				canvas.AddText(textPos, textColor, fmt.Sprintf("%d", stats.Health))
 			}
 		}),
 	}

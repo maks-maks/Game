@@ -17,6 +17,7 @@ type StatsComponent struct {
 	Heal        int32
 	Health      int32
 	Reload      float32 `imgui:"%.1f ms"`
+	AttackRange float32
 }
 type SquadComponent struct {
 	Squad string
@@ -30,19 +31,42 @@ func setupECS() {
 	ecsManager.RegisterComponent("target", &TargetComponent{})
 	ecsManager.RegisterComponent("squad", &SquadComponent{})
 
-	for i := 1; i < 5; i++ {
-		createTank("Frederik", "Sandali", 100, 100)
-		createTank("Frederik", "Geroi", 400, 400)
-	}
+	// for i := 1; i < 5; i++ {
+	//createTank("Frederik", "Sandali", 100, 100)
+	createTank("Frederik", "Geroi", 400, 400)
+	createRanger("Legolas", "Sandali", 100, 100)
+	//createRanger("Legolas", "Geroi", 400, 400)
+	// }
 
 	// e2 := ecsManager.NewEntity()
 	// ecsManager.AddComponent(e2, &PositionComponent{X: 10, Y: 15})
+}
+func createRanger(n string, squad string, x float32, y float32) *ecs.Entity {
+	e := ecsManager.NewEntity()
+	ecsManager.AddComponent(e, &PositionComponent{
+		X: x + rand.Float32()*200 - 100,
+		Y: y + rand.Float32()*200 - 100,
+	})
+	ecsManager.AddComponent(e, &SquadComponent{
+		Squad: squad,
+	})
+	ecsManager.AddComponent(e, &StatsComponent{
+		MaxHealth:   200,
+		Health:      200,
+		Damage:      25,
+		Cooldown:    400,
+		Stamina:     100,
+		StaminaCost: 20,
+		Dodge:       10,
+		AttackRange: 225,
+	})
+	ecsManager.AddComponent(e, &TargetComponent{})
+	return e
 }
 
 func createTank(n string, squad string, x float32, y float32) *ecs.Entity {
 	e := ecsManager.NewEntity()
 	ecsManager.AddComponent(e, &PositionComponent{
-		// X: (rand.Float32() * 300) + 100,
 		X: x + rand.Float32()*200 - 100,
 		Y: y + rand.Float32()*200 - 100,
 	})
@@ -57,6 +81,7 @@ func createTank(n string, squad string, x float32, y float32) *ecs.Entity {
 		Stamina:     100,
 		StaminaCost: 90,
 		Dodge:       10,
+		AttackRange: 75,
 	})
 	ecsManager.AddComponent(e, &TargetComponent{})
 	return e
@@ -95,10 +120,13 @@ type movementSystem struct{}
 func (s *movementSystem) Update(dt float32) {
 	targetC := ecsManager.componentMap["target"]
 	positionC := ecsManager.componentMap["position"]
-	query := ecsManager.Query(ecs.BuildTag(targetC, positionC))
+	statsC := ecsManager.componentMap["stats"]
+
+	query := ecsManager.Query(ecs.BuildTag(targetC, positionC, statsC))
 	for _, item := range query {
 		position := item.Components[positionC].(*PositionComponent)
 		currentTarget := item.Components[targetC].(*TargetComponent)
+		stats := item.Components[statsC].(*StatsComponent)
 
 		target := ecsManager.GetEntityByID(currentTarget.TargetID, positionC)
 		if target == nil {
@@ -112,7 +140,7 @@ func (s *movementSystem) Update(dt float32) {
 		d2 := ((x2 - x1) * (x2 - x1)) + ((y2 - y1) * (y2 - y1))
 		d := float32(math.Sqrt(float64(d2)))
 
-		if d < 75 {
+		if d < stats.AttackRange {
 			continue
 		}
 
@@ -158,7 +186,7 @@ func (s *battleSystem) Update(dt float32) {
 		x1, y1, x2, y2 := position.X, position.Y, targetPosition.X, targetPosition.Y
 		d2 := ((x2 - x1) * (x2 - x1)) + ((y2 - y1) * (y2 - y1))
 		d := math.Sqrt(float64(d2))
-		if d > 75 {
+		if float32(d) > stats.AttackRange {
 			continue
 		}
 		targetStats.Health = targetStats.Health - stats.Damage
