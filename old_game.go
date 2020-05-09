@@ -10,9 +10,9 @@ func old_game_main() {
 	rand.Seed(int64(time.Now().Nanosecond()))
 
 	// squad1 := Squad{unit1, unit2, unit3}
-	squad1 := createSquad("SANDALI")
+	squad1 := createSquad_("SANDALI")
 	// fmt.Println(squad1)
-	squad2 := createSquad("GEROI")
+	squad2 := createSquad_("GEROI")
 	// for squad1.units[2].health > 0 && squad2.units[2].health > 0 {
 	// 	time.Sleep(100 * time.Millisecond)
 	// 	battleSquad(&squad1, &squad2)
@@ -75,7 +75,7 @@ type Squad struct {
 	units []*Unit
 }
 
-func createSquad(n string) Squad {
+func createSquad_(n string) Squad {
 	squad := Squad{
 		name: n,
 	}

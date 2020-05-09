@@ -32,15 +32,25 @@ func setupECS() {
 	ecsManager.RegisterComponent("squad", &SquadComponent{})
 
 	// for i := 1; i < 5; i++ {
-	//createTank("Frederik", "Sandali", 100, 100)
-	createTank("Frederik", "Geroi", 400, 400)
-	createRanger("Legolas", "Sandali", 100, 100)
-	//createRanger("Legolas", "Geroi", 400, 400)
+	createSquad("Geroi", 400, 400)
+	createSquad("Sandali", 100, 100)
+	createSquad("Angels", 400, 100)
+	createSquad("Daemons", 100, 400)
+	// createTank("Frederik", "Sandali", 100, 100)
+	// createTank("Frederik", "Geroi", 400, 400)
+	// createRanger("Legolas", "Sandali", 100, 100)
+	// createRanger("Legolas", "Geroi", 400, 400)
 	// }
 
 	// e2 := ecsManager.NewEntity()
 	// ecsManager.AddComponent(e2, &PositionComponent{X: 10, Y: 15})
 }
+
+func createSquad(squad string, x float32, y float32) {
+	createTank("Frederik", squad, x, y)
+	createRanger("Legolas", squad, x, y)
+}
+
 func createRanger(n string, squad string, x float32, y float32) *ecs.Entity {
 	e := ecsManager.NewEntity()
 	ecsManager.AddComponent(e, &PositionComponent{
