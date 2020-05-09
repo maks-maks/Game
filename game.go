@@ -18,6 +18,9 @@ type StatsComponent struct {
 	Health      int32
 	Reload      float32 `imgui:"%.1f ms"`
 }
+type SquadComponent struct {
+	Squad string
+}
 
 func setupECS() {
 	ecsManager = NewECSManager()
@@ -25,19 +28,26 @@ func setupECS() {
 	ecsManager.RegisterComponent("position", &PositionComponent{})
 	ecsManager.RegisterComponent("stats", &StatsComponent{})
 	ecsManager.RegisterComponent("target", &TargetComponent{})
-	for i := 1; i < 101; i++ {
-		createTank("Frederik")
+	ecsManager.RegisterComponent("squad", &SquadComponent{})
+
+	for i := 1; i < 5; i++ {
+		createTank("Frederik", "Sandali", 100, 100)
+		createTank("Frederik", "Geroi", 400, 400)
 	}
 
 	// e2 := ecsManager.NewEntity()
 	// ecsManager.AddComponent(e2, &PositionComponent{X: 10, Y: 15})
 }
 
-func createTank(n string) *ecs.Entity {
+func createTank(n string, squad string, x float32, y float32) *ecs.Entity {
 	e := ecsManager.NewEntity()
 	ecsManager.AddComponent(e, &PositionComponent{
-		X: (rand.Float32() * 300) + 100,
-		Y: (rand.Float32() * 200) + 100,
+		// X: (rand.Float32() * 300) + 100,
+		X: x + rand.Float32()*200 - 100,
+		Y: y + rand.Float32()*200 - 100,
+	})
+	ecsManager.AddComponent(e, &SquadComponent{
+		Squad: squad,
 	})
 	ecsManager.AddComponent(e, &StatsComponent{
 		MaxHealth:   500,
@@ -59,16 +69,22 @@ type TargetComponent struct {
 type targetingSystem struct{}
 
 func (s *targetingSystem) Update(dt float32) {
-	entities := ecsManager.Query(ecs.BuildTag(ecsManager.componentMap["target"])).Entities()
+	targetC := ecsManager.componentMap["target"]
+	statC := ecsManager.componentMap["stats"]
+	squadC := ecsManager.componentMap["squad"]
 
-	for _, e := range entities {
-		d, _ := e.GetComponentData(ecsManager.componentMap["target"])
-		data := d.(*TargetComponent)
+	entities := ecsManager.Query(ecs.BuildTag(targetC, squadC))
 
-		targets := ecsManager.Query(ecs.BuildTag(ecsManager.componentMap["stats"])).Entities()
-		for _, t := range targets {
-			if t.ID != e.ID {
-				data.TargetID = t.ID
+	for _, item := range entities {
+		target := item.Components[targetC].(*TargetComponent)
+		squad := item.Components[squadC].(*SquadComponent)
+
+		targetEntities := ecsManager.Query(ecs.BuildTag(statC, squadC))
+		for _, te := range targetEntities {
+			targetSquad := te.Components[squadC].(*SquadComponent)
+
+			if te.Entity.ID != item.Entity.ID && squad.Squad != targetSquad.Squad {
+				target.TargetID = te.Entity.ID
 			}
 		}
 	}
