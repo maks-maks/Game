@@ -34,8 +34,8 @@ func setupECS() {
 	// for i := 1; i < 5; i++ {
 	createSquad("Geroi", 400, 400)
 	createSquad("Sandali", 100, 100)
-	createSquad("Angels", 400, 100)
-	createSquad("Daemons", 100, 400)
+	//createSquad("Angels", 400, 100)
+	//createSquad("Daemons", 100, 400)
 	// createTank("Frederik", "Sandali", 100, 100)
 	// createTank("Frederik", "Geroi", 400, 400)
 	// createRanger("Legolas", "Sandali", 100, 100)
@@ -67,7 +67,7 @@ func createRanger(n string, squad string, x float32, y float32) *ecs.Entity {
 		Cooldown:    400,
 		Stamina:     100,
 		StaminaCost: 20,
-		Dodge:       10,
+		Dodge:       30,
 		AttackRange: 225,
 	})
 	ecsManager.AddComponent(e, &TargetComponent{})
@@ -199,9 +199,15 @@ func (s *battleSystem) Update(dt float32) {
 		if float32(d) > stats.AttackRange {
 			continue
 		}
-		targetStats.Health = targetStats.Health - stats.Damage
+
 		stats.Stamina = stats.Stamina - stats.StaminaCost
 		stats.Reload = 0
+
+		if rand.Int31n(100)+1 <= targetStats.Dodge {
+			continue
+		}
+
+		targetStats.Health = targetStats.Health - stats.Damage
 		if targetStats.Health <= 0 {
 			ecsManager.DisposeEntity(target.Entity)
 		}
