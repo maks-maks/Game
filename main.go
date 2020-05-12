@@ -42,7 +42,9 @@ func gameCanvas() *g.Layout {
 				pos := g.GetCursorScreenPos()
 				p0 := pos.Add(image.Pt(int(data.X), int(data.Y)))
 				var circleColor color.RGBA
-				if stats.AttackRange > 100 {
+				if stats.Heal > 0 {
+					circleColor = color.RGBA{75, 120, 210, 255}
+				} else if stats.AttackRange > 100 {
 					circleColor = color.RGBA{200, 0, 100, 255}
 				} else {
 					circleColor = color.RGBA{255, 255, 255, 255}

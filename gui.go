@@ -11,7 +11,7 @@ import (
 
 var demo = false
 var curEntityID ecs.EntityID = 0
-var delayMs int32 = 100
+var delayMs int32 = 30
 
 func leftPanel() *g.Layout {
 	entities := ecsManager.Query(0).Entities()

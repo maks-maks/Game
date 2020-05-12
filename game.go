@@ -49,10 +49,35 @@ func setupECS() {
 }
 
 func createSquad(squad string, x float32, y float32) {
-	createTank("Frederik", squad, x, y)
+	createHealer("Angel", squad, x, y)
 	createRanger("Legolas", squad, x, y)
-}
 
+	createTank("Frederik", squad, x, y)
+}
+func createHealer(n string, squad string, x float32, y float32) *ecs.Entity {
+	e := ecsManager.NewEntity()
+	ecsManager.AddComponent(e, &PositionComponent{
+		X: x + rand.Float32()*200 - 100,
+		Y: y + rand.Float32()*200 - 100,
+	})
+	ecsManager.AddComponent(e, &SquadComponent{
+		Squad: squad,
+	})
+	ecsManager.AddComponent(e, &StatsComponent{
+		MaxHealth:   200,
+		Health:      200,
+		Damage:      20,
+		Cooldown:    4000,
+		Stamina:     100,
+		StaminaCost: 70,
+		Dodge:       30,
+		AttackRange: 75,
+		DodgeRange:  30,
+		Heal:        100,
+	})
+	ecsManager.AddComponent(e, &TargetComponent{})
+	return e
+}
 func createRanger(n string, squad string, x float32, y float32) *ecs.Entity {
 	e := ecsManager.NewEntity()
 	ecsManager.AddComponent(e, &PositionComponent{
@@ -71,7 +96,7 @@ func createRanger(n string, squad string, x float32, y float32) *ecs.Entity {
 		StaminaCost: 20,
 		Dodge:       30,
 		AttackRange: 300,
-		DodgeRange:  75,
+		DodgeRange:  25,
 	})
 	ecsManager.AddComponent(e, &TargetComponent{})
 	return e
@@ -112,17 +137,22 @@ func (s *targetingSystem) Update(dt float32) {
 	statC := ecsManager.componentMap["stats"]
 	squadC := ecsManager.componentMap["squad"]
 
-	entities := ecsManager.Query(ecs.BuildTag(targetC, squadC))
+	entities := ecsManager.Query(ecs.BuildTag(targetC, squadC, statC))
 
 	for _, item := range entities {
 		target := item.Components[targetC].(*TargetComponent)
 		squad := item.Components[squadC].(*SquadComponent)
-
+		stats := item.Components[statC].(*StatsComponent)
 		targetEntities := ecsManager.Query(ecs.BuildTag(statC, squadC))
 		for _, te := range targetEntities {
 			targetSquad := te.Components[squadC].(*SquadComponent)
+			targetStats := te.Components[statC].(*StatsComponent)
+			if stats.Heal > 0 {
+				if te.Entity.ID != item.Entity.ID && squad.Squad == targetSquad.Squad && targetStats.Health < targetStats.MaxHealth {
+					target.TargetID = te.Entity.ID
 
-			if te.Entity.ID != item.Entity.ID && squad.Squad != targetSquad.Squad {
+				}
+			} else if te.Entity.ID != item.Entity.ID && squad.Squad != targetSquad.Squad {
 				target.TargetID = te.Entity.ID
 			}
 		}
@@ -206,7 +236,14 @@ func (s *battleSystem) Update(dt float32) {
 
 		stats.Stamina = stats.Stamina - stats.StaminaCost
 		stats.Reload = 0
-
+		if stats.Heal > 0 {
+			targetStats.Health = targetStats.Health + stats.Heal
+			if targetStats.Health > targetStats.MaxHealth {
+				targetStats.Health = targetStats.MaxHealth
+				continue
+			}
+			continue
+		}
 		if rand.Int31n(100)+1 <= targetStats.Dodge {
 			targetPosition.X += (x2 - x1) / d * 1 * targetStats.DodgeRange
 			targetPosition.Y += (y2 - y1) / d * 1 * targetStats.DodgeRange
