@@ -18,6 +18,7 @@ type StatsComponent struct {
 	Health      int32
 	Reload      float32 `imgui:"%.1f ms"`
 	AttackRange float32
+	DodgeRange  float32
 }
 type SquadComponent struct {
 	Squad string
@@ -30,7 +31,8 @@ func setupECS() {
 	ecsManager.RegisterComponent("stats", &StatsComponent{})
 	ecsManager.RegisterComponent("target", &TargetComponent{})
 	ecsManager.RegisterComponent("squad", &SquadComponent{})
-
+	//createTank("Frederik", "a", 100, 100)
+	//createRanger("Legolas", "b", 400, 400)
 	// for i := 1; i < 5; i++ {
 	createSquad("Geroi", 400, 400)
 	createSquad("Sandali", 100, 100)
@@ -63,12 +65,13 @@ func createRanger(n string, squad string, x float32, y float32) *ecs.Entity {
 	ecsManager.AddComponent(e, &StatsComponent{
 		MaxHealth:   200,
 		Health:      200,
-		Damage:      25,
+		Damage:      20,
 		Cooldown:    400,
 		Stamina:     100,
 		StaminaCost: 20,
 		Dodge:       30,
-		AttackRange: 225,
+		AttackRange: 300,
+		DodgeRange:  75,
 	})
 	ecsManager.AddComponent(e, &TargetComponent{})
 	return e
@@ -92,6 +95,7 @@ func createTank(n string, squad string, x float32, y float32) *ecs.Entity {
 		StaminaCost: 90,
 		Dodge:       10,
 		AttackRange: 75,
+		DodgeRange:  -25,
 	})
 	ecsManager.AddComponent(e, &TargetComponent{})
 	return e
@@ -195,8 +199,8 @@ func (s *battleSystem) Update(dt float32) {
 		targetPosition := target.Components[positionC].(*PositionComponent)
 		x1, y1, x2, y2 := position.X, position.Y, targetPosition.X, targetPosition.Y
 		d2 := ((x2 - x1) * (x2 - x1)) + ((y2 - y1) * (y2 - y1))
-		d := math.Sqrt(float64(d2))
-		if float32(d) > stats.AttackRange {
+		d := float32(math.Sqrt(float64(d2)))
+		if d > stats.AttackRange {
 			continue
 		}
 
@@ -204,6 +208,8 @@ func (s *battleSystem) Update(dt float32) {
 		stats.Reload = 0
 
 		if rand.Int31n(100)+1 <= targetStats.Dodge {
+			targetPosition.X += (x2 - x1) / d * 1 * targetStats.DodgeRange
+			targetPosition.Y += (y2 - y1) / d * 1 * targetStats.DodgeRange
 			continue
 		}
 
