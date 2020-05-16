@@ -15,8 +15,6 @@ type Ability interface {
 type RageAbility struct{}
 
 func (a *RageAbility) Activate(id ecs.EntityID) {
-	statC := ecsManager.componentMap["stats"]
-
 	item := ecsManager.GetEntityByID(id, statC)
 	stats := item.Components[statC].(*StatsComponent)
 
@@ -24,8 +22,6 @@ func (a *RageAbility) Activate(id ecs.EntityID) {
 	stats.Cooldown = stats.Cooldown / 3
 }
 func (a *RageAbility) Deactivate(id ecs.EntityID) {
-	statC := ecsManager.componentMap["stats"]
-
 	item := ecsManager.GetEntityByID(id, statC)
 	stats := item.Components[statC].(*StatsComponent)
 
@@ -58,14 +54,22 @@ type SquadComponent struct {
 	Squad string
 }
 
+var (
+	positionC *ecs.Component
+	statC     *ecs.Component
+	targetC   *ecs.Component
+	squadC    *ecs.Component
+	ultaC     *ecs.Component
+)
+
 func setupECS() {
 	ecsManager = NewECSManager()
 
-	ecsManager.RegisterComponent("position", &PositionComponent{})
-	ecsManager.RegisterComponent("stats", &StatsComponent{})
-	ecsManager.RegisterComponent("target", &TargetComponent{})
-	ecsManager.RegisterComponent("squad", &SquadComponent{})
-	ecsManager.RegisterComponent("ulta", &UltimateComponent{})
+	positionC = ecsManager.RegisterComponent("position", &PositionComponent{})
+	statC = ecsManager.RegisterComponent("stats", &StatsComponent{})
+	targetC = ecsManager.RegisterComponent("target", &TargetComponent{})
+	squadC = ecsManager.RegisterComponent("squad", &SquadComponent{})
+	ultaC = ecsManager.RegisterComponent("ulta", &UltimateComponent{})
 	//createTank("Frederik", "a", 100, 100)
 	//createRanger("Legolas", "b", 400, 400)
 	// for i := 1; i < 5; i++ {
@@ -175,11 +179,6 @@ type TargetComponent struct {
 type targetingSystem struct{}
 
 func (s *targetingSystem) Update(dt float32) {
-	targetC := ecsManager.componentMap["target"]
-	statC := ecsManager.componentMap["stats"]
-	positionC := ecsManager.componentMap["position"]
-	squadC := ecsManager.componentMap["squad"]
-
 	entities := ecsManager.Query(ecs.BuildTag(targetC, squadC, statC, positionC))
 
 	for _, item := range entities {
@@ -216,15 +215,11 @@ func (s *targetingSystem) Update(dt float32) {
 type movementSystem struct{}
 
 func (s *movementSystem) Update(dt float32) {
-	targetC := ecsManager.componentMap["target"]
-	positionC := ecsManager.componentMap["position"]
-	statsC := ecsManager.componentMap["stats"]
-
-	query := ecsManager.Query(ecs.BuildTag(targetC, positionC, statsC))
+	query := ecsManager.Query(ecs.BuildTag(targetC, positionC, statC))
 	for _, item := range query {
 		position := item.Components[positionC].(*PositionComponent)
 		currentTarget := item.Components[targetC].(*TargetComponent)
-		stats := item.Components[statsC].(*StatsComponent)
+		stats := item.Components[statC].(*StatsComponent)
 
 		target := ecsManager.GetEntityByID(currentTarget.TargetID, positionC)
 		if target == nil {
@@ -255,10 +250,6 @@ func distance(a, b *PositionComponent) float32 {
 type ultimatesSystem struct{}
 
 func (s *ultimatesSystem) Update(dt float32) {
-	// targetC := ecsManager.componentMap["target"]
-	// statC := ecsManager.componentMap["stats"]
-	// positionC := ecsManager.componentMap["position"]
-	ultaC := ecsManager.componentMap["ulta"]
 	query := ecsManager.Query(ecs.BuildTag(ultaC))
 
 	for _, item := range query {
@@ -281,10 +272,6 @@ func (s *ultimatesSystem) Update(dt float32) {
 type battleSystem struct{}
 
 func (s *battleSystem) Update(dt float32) {
-	targetC := ecsManager.componentMap["target"]
-	statC := ecsManager.componentMap["stats"]
-	positionC := ecsManager.componentMap["position"]
-
 	query := ecsManager.Query(ecs.BuildTag(targetC, statC, positionC))
 
 	for _, item := range query {

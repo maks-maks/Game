@@ -30,13 +30,11 @@ func gameCanvas() *g.Layout {
 	return &g.Layout{
 		// g.Label("Canvas demo"),
 		g.Custom(func() {
-			pComp := ecsManager.componentMap["position"]
-			sComp := ecsManager.componentMap["stats"]
-			q := ecsManager.Query(ecs.BuildTag(pComp, sComp))
+			q := ecsManager.Query(ecs.BuildTag(positionC, statC))
 
 			for _, item := range q {
-				data := item.Components[pComp].(*PositionComponent)
-				stats := item.Components[sComp].(*StatsComponent)
+				data := item.Components[positionC].(*PositionComponent)
+				stats := item.Components[statC].(*StatsComponent)
 
 				canvas := g.GetCanvas()
 				pos := g.GetCursorScreenPos()
