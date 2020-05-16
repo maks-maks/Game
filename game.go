@@ -135,25 +135,37 @@ type targetingSystem struct{}
 func (s *targetingSystem) Update(dt float32) {
 	targetC := ecsManager.componentMap["target"]
 	statC := ecsManager.componentMap["stats"]
+	positionC := ecsManager.componentMap["position"]
 	squadC := ecsManager.componentMap["squad"]
 
-	entities := ecsManager.Query(ecs.BuildTag(targetC, squadC, statC))
+	entities := ecsManager.Query(ecs.BuildTag(targetC, squadC, statC, positionC))
 
 	for _, item := range entities {
 		target := item.Components[targetC].(*TargetComponent)
 		squad := item.Components[squadC].(*SquadComponent)
 		stats := item.Components[statC].(*StatsComponent)
-		targetEntities := ecsManager.Query(ecs.BuildTag(statC, squadC))
+		position := item.Components[positionC].(*PositionComponent)
+		targetEntities := ecsManager.Query(ecs.BuildTag(statC, squadC, positionC))
+
+		var curDistance float32 = 1000000
+
 		for _, te := range targetEntities {
 			targetSquad := te.Components[squadC].(*SquadComponent)
 			targetStats := te.Components[statC].(*StatsComponent)
-			if stats.Heal > 0 {
-				if te.Entity.ID != item.Entity.ID && squad.Squad == targetSquad.Squad && targetStats.Health < targetStats.MaxHealth {
-					target.TargetID = te.Entity.ID
+			targetPosition := te.Components[positionC].(*PositionComponent)
 
+			d := distance(position, targetPosition)
+			if d < curDistance {
+				if stats.Heal > 0 {
+					if te.Entity.ID != item.Entity.ID && squad.Squad == targetSquad.Squad && targetStats.Health < targetStats.MaxHealth {
+						curDistance = d
+						target.TargetID = te.Entity.ID
+
+					}
+				} else if te.Entity.ID != item.Entity.ID && squad.Squad != targetSquad.Squad {
+					curDistance = d
+					target.TargetID = te.Entity.ID
 				}
-			} else if te.Entity.ID != item.Entity.ID && squad.Squad != targetSquad.Squad {
-				target.TargetID = te.Entity.ID
 			}
 		}
 	}
@@ -181,8 +193,7 @@ func (s *movementSystem) Update(dt float32) {
 		targetPosition := target.Components[positionC].(*PositionComponent)
 		x1, y1, x2, y2 := position.X, position.Y, targetPosition.X, targetPosition.Y
 
-		d2 := ((x2 - x1) * (x2 - x1)) + ((y2 - y1) * (y2 - y1))
-		d := float32(math.Sqrt(float64(d2)))
+		d := distance(position, targetPosition)
 
 		if d < stats.AttackRange {
 			continue
@@ -192,6 +203,11 @@ func (s *movementSystem) Update(dt float32) {
 		position.Y += (y2 - y1) / d * dt / 30
 	}
 
+}
+
+func distance(a, b *PositionComponent) float32 {
+	d2 := ((b.X - a.X) * (b.X - a.X)) + ((b.Y - a.Y) * (b.Y - a.Y))
+	return float32(math.Sqrt(float64(d2)))
 }
 
 type battleSystem struct{}
@@ -228,8 +244,7 @@ func (s *battleSystem) Update(dt float32) {
 
 		targetPosition := target.Components[positionC].(*PositionComponent)
 		x1, y1, x2, y2 := position.X, position.Y, targetPosition.X, targetPosition.Y
-		d2 := ((x2 - x1) * (x2 - x1)) + ((y2 - y1) * (y2 - y1))
-		d := float32(math.Sqrt(float64(d2)))
+		d := distance(position, targetPosition)
 		if d > stats.AttackRange {
 			continue
 		}
