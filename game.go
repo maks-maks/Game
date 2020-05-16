@@ -7,6 +7,39 @@ import (
 	"github.com/bytearena/ecs"
 )
 
+type Ability interface {
+	Activate(id ecs.EntityID)
+	Deactivate(id ecs.EntityID)
+}
+
+type RageAbility struct{}
+
+func (a *RageAbility) Activate(id ecs.EntityID) {
+	statC := ecsManager.componentMap["stats"]
+
+	item := ecsManager.GetEntityByID(id, statC)
+	stats := item.Components[statC].(*StatsComponent)
+
+	stats.Resist = 2
+	stats.Cooldown = stats.Cooldown / 3
+}
+func (a *RageAbility) Deactivate(id ecs.EntityID) {
+	statC := ecsManager.componentMap["stats"]
+
+	item := ecsManager.GetEntityByID(id, statC)
+	stats := item.Components[statC].(*StatsComponent)
+
+	stats.Resist = 1
+	stats.Cooldown = stats.Cooldown * 3
+}
+
+type UltimateComponent struct {
+	Cooldown float32 `imgui:"%.1f ms"`
+	Reload   float32 `imgui:"%.1f ms"`
+	Ability  Ability
+	Active   bool
+}
+
 type StatsComponent struct {
 	MaxHealth   int32
 	Damage      int32
@@ -19,6 +52,7 @@ type StatsComponent struct {
 	Reload      float32 `imgui:"%.1f ms"`
 	AttackRange float32
 	DodgeRange  float32
+	Resist      float32
 }
 type SquadComponent struct {
 	Squad string
@@ -31,6 +65,7 @@ func setupECS() {
 	ecsManager.RegisterComponent("stats", &StatsComponent{})
 	ecsManager.RegisterComponent("target", &TargetComponent{})
 	ecsManager.RegisterComponent("squad", &SquadComponent{})
+	ecsManager.RegisterComponent("ulta", &UltimateComponent{})
 	//createTank("Frederik", "a", 100, 100)
 	//createRanger("Legolas", "b", 400, 400)
 	// for i := 1; i < 5; i++ {
@@ -74,6 +109,7 @@ func createHealer(n string, squad string, x float32, y float32) *ecs.Entity {
 		AttackRange: 75,
 		DodgeRange:  30,
 		Heal:        100,
+		Resist:      1,
 	})
 	ecsManager.AddComponent(e, &TargetComponent{})
 	return e
@@ -97,6 +133,7 @@ func createRanger(n string, squad string, x float32, y float32) *ecs.Entity {
 		Dodge:       30,
 		AttackRange: 300,
 		DodgeRange:  25,
+		Resist:      1,
 	})
 	ecsManager.AddComponent(e, &TargetComponent{})
 	return e
@@ -111,16 +148,21 @@ func createTank(n string, squad string, x float32, y float32) *ecs.Entity {
 	ecsManager.AddComponent(e, &SquadComponent{
 		Squad: squad,
 	})
+	ecsManager.AddComponent(e, &UltimateComponent{
+		Cooldown: 10000,
+		Ability:  &RageAbility{},
+	})
 	ecsManager.AddComponent(e, &StatsComponent{
 		MaxHealth:   500,
 		Health:      500,
 		Damage:      90,
-		Cooldown:    1000,
+		Cooldown:    3000,
 		Stamina:     100,
 		StaminaCost: 90,
 		Dodge:       10,
 		AttackRange: 75,
 		DodgeRange:  -25,
+		Resist:      1,
 	})
 	ecsManager.AddComponent(e, &TargetComponent{})
 	return e
@@ -210,6 +252,32 @@ func distance(a, b *PositionComponent) float32 {
 	return float32(math.Sqrt(float64(d2)))
 }
 
+type ultimatesSystem struct{}
+
+func (s *ultimatesSystem) Update(dt float32) {
+	// targetC := ecsManager.componentMap["target"]
+	// statC := ecsManager.componentMap["stats"]
+	// positionC := ecsManager.componentMap["position"]
+	ultaC := ecsManager.componentMap["ulta"]
+	query := ecsManager.Query(ecs.BuildTag(ultaC))
+
+	for _, item := range query {
+		ulta := item.Components[ultaC].(*UltimateComponent)
+		if ulta.Reload < ulta.Cooldown {
+			ulta.Reload = ulta.Reload + dt
+			continue
+		}
+		ulta.Reload = 0
+		if ulta.Active {
+			ulta.Ability.Deactivate(item.Entity.ID)
+			ulta.Active = false
+		} else {
+			ulta.Ability.Activate(item.Entity.ID)
+			ulta.Active = true
+		}
+	}
+}
+
 type battleSystem struct{}
 
 func (s *battleSystem) Update(dt float32) {
@@ -265,7 +333,7 @@ func (s *battleSystem) Update(dt float32) {
 			continue
 		}
 
-		targetStats.Health = targetStats.Health - stats.Damage
+		targetStats.Health = targetStats.Health - int32((float32(stats.Damage) / targetStats.Resist))
 		if targetStats.Health <= 0 {
 			ecsManager.DisposeEntity(target.Entity)
 		}

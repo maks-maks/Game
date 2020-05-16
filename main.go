@@ -104,6 +104,7 @@ func main() {
 	systems := []System{
 		&targetingSystem{},
 		&movementSystem{},
+		&ultimatesSystem{},
 		&battleSystem{},
 	}
 
