@@ -62,6 +62,8 @@ type StatsComponent struct {
 type SquadComponent struct {
 	Squad string
 }
+type AliveComponent struct {
+}
 
 var (
 	positionC *ecs.Component
@@ -69,6 +71,7 @@ var (
 	targetC   *ecs.Component
 	squadC    *ecs.Component
 	ultaC     *ecs.Component
+	aliveC    *ecs.Component
 )
 
 func setupECS() {
@@ -79,6 +82,7 @@ func setupECS() {
 	targetC = ecsManager.RegisterComponent("target", &TargetComponent{})
 	squadC = ecsManager.RegisterComponent("squad", &SquadComponent{})
 	ultaC = ecsManager.RegisterComponent("ulta", &UltimateComponent{})
+	aliveC = ecsManager.RegisterComponent("alive", &AliveComponent{})
 	//createTank("Frederik", "a", 100, 100)
 	//createRanger("Legolas", "b", 400, 400)
 	// for i := 1; i < 5; i++ {
@@ -111,6 +115,7 @@ func createHealer(n string, squad string, x float32, y float32) *ecs.Entity {
 	ecsManager.AddComponent(e, &SquadComponent{
 		Squad: squad,
 	})
+	ecsManager.AddComponent(e, &AliveComponent{})
 	ecsManager.AddComponent(e, &UltimateComponent{
 		Ability: &DummyAbility{},
 	})
@@ -139,6 +144,7 @@ func createRanger(n string, squad string, x float32, y float32) *ecs.Entity {
 	ecsManager.AddComponent(e, &SquadComponent{
 		Squad: squad,
 	})
+	ecsManager.AddComponent(e, &AliveComponent{})
 	ecsManager.AddComponent(e, &UltimateComponent{
 		Ability: &DummyAbility{},
 	})
@@ -173,6 +179,7 @@ func createTank(n string, squad string, x float32, y float32) *ecs.Entity {
 		Charge:   0,
 		HitInc:   25,
 	})
+	ecsManager.AddComponent(e, &AliveComponent{})
 	ecsManager.AddComponent(e, &StatsComponent{
 		MaxHealth:   500,
 		Health:      500,
@@ -196,14 +203,14 @@ type TargetComponent struct {
 type targetingSystem struct{}
 
 func (s *targetingSystem) Update(dt float32) {
-	entities := ecsManager.Query(ecs.BuildTag(targetC, squadC, statC, positionC))
+	entities := ecsManager.Query(ecs.BuildTag(targetC, squadC, statC, positionC, aliveC))
 
 	for _, item := range entities {
 		target := item.Components[targetC].(*TargetComponent)
 		squad := item.Components[squadC].(*SquadComponent)
 		stats := item.Components[statC].(*StatsComponent)
 		position := item.Components[positionC].(*PositionComponent)
-		targetEntities := ecsManager.Query(ecs.BuildTag(statC, squadC, positionC))
+		targetEntities := ecsManager.Query(ecs.BuildTag(statC, squadC, positionC, aliveC))
 
 		var curDistance float32 = 1000000
 
@@ -232,7 +239,7 @@ func (s *targetingSystem) Update(dt float32) {
 type movementSystem struct{}
 
 func (s *movementSystem) Update(dt float32) {
-	query := ecsManager.Query(ecs.BuildTag(targetC, positionC, statC))
+	query := ecsManager.Query(ecs.BuildTag(targetC, positionC, statC, aliveC))
 	for _, item := range query {
 		position := item.Components[positionC].(*PositionComponent)
 		currentTarget := item.Components[targetC].(*TargetComponent)
@@ -267,7 +274,7 @@ func distance(a, b *PositionComponent) float32 {
 type ultimatesSystem struct{}
 
 func (s *ultimatesSystem) Update(dt float32) {
-	query := ecsManager.Query(ecs.BuildTag(ultaC))
+	query := ecsManager.Query(ecs.BuildTag(ultaC, aliveC))
 
 	for _, item := range query {
 		ulta := item.Components[ultaC].(*UltimateComponent)
@@ -293,14 +300,14 @@ func (s *ultimatesSystem) Update(dt float32) {
 type battleSystem struct{}
 
 func (s *battleSystem) Update(dt float32) {
-	query := ecsManager.Query(ecs.BuildTag(targetC, statC, positionC, ultaC))
+	query := ecsManager.Query(ecs.BuildTag(targetC, statC, positionC, ultaC, aliveC))
 
 	for _, item := range query {
 		currentTarget := item.Components[targetC].(*TargetComponent)
 		stats := item.Components[statC].(*StatsComponent)
 		position := item.Components[positionC].(*PositionComponent)
 
-		target := ecsManager.GetEntityByID(currentTarget.TargetID, statC, positionC, ultaC)
+		target := ecsManager.GetEntityByID(currentTarget.TargetID, statC, positionC, ultaC, aliveC)
 		if target == nil {
 			currentTarget.TargetID = 0
 			continue
@@ -347,7 +354,7 @@ func (s *battleSystem) Update(dt float32) {
 		ulta := item.Components[ultaC].(*UltimateComponent)
 		ulta.Charge = ulta.Charge + ulta.HitInc
 		if targetStats.Health <= 0 {
-			ecsManager.DisposeEntity(target.Entity)
+			target.Entity.RemoveComponent(aliveC)
 		}
 	}
 }
