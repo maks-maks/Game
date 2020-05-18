@@ -12,6 +12,11 @@ type Ability interface {
 	Deactivate(id ecs.EntityID)
 }
 
+type DummyAbility struct{}
+
+func (a *DummyAbility) Activate(id ecs.EntityID)   {}
+func (a *DummyAbility) Deactivate(id ecs.EntityID) {}
+
 type RageAbility struct{}
 
 func (a *RageAbility) Activate(id ecs.EntityID) {
@@ -34,6 +39,10 @@ type UltimateComponent struct {
 	Reload   float32 `imgui:"%.1f ms"`
 	Ability  Ability
 	Active   bool
+	Charge   float32
+	HitInc   float32
+	DodgeInc float32
+	HealInc  float32
 }
 
 type StatsComponent struct {
@@ -102,6 +111,9 @@ func createHealer(n string, squad string, x float32, y float32) *ecs.Entity {
 	ecsManager.AddComponent(e, &SquadComponent{
 		Squad: squad,
 	})
+	ecsManager.AddComponent(e, &UltimateComponent{
+		Ability: &DummyAbility{},
+	})
 	ecsManager.AddComponent(e, &StatsComponent{
 		MaxHealth:   200,
 		Health:      200,
@@ -126,6 +138,9 @@ func createRanger(n string, squad string, x float32, y float32) *ecs.Entity {
 	})
 	ecsManager.AddComponent(e, &SquadComponent{
 		Squad: squad,
+	})
+	ecsManager.AddComponent(e, &UltimateComponent{
+		Ability: &DummyAbility{},
 	})
 	ecsManager.AddComponent(e, &StatsComponent{
 		MaxHealth:   200,
@@ -155,6 +170,8 @@ func createTank(n string, squad string, x float32, y float32) *ecs.Entity {
 	ecsManager.AddComponent(e, &UltimateComponent{
 		Cooldown: 10000,
 		Ability:  &RageAbility{},
+		Charge:   0,
+		HitInc:   25,
 	})
 	ecsManager.AddComponent(e, &StatsComponent{
 		MaxHealth:   500,
@@ -258,6 +275,10 @@ func (s *ultimatesSystem) Update(dt float32) {
 			ulta.Reload = ulta.Reload + dt
 			continue
 		}
+		if ulta.Charge < 100 {
+			continue
+		}
+		ulta.Charge -= 100
 		ulta.Reload = 0
 		if ulta.Active {
 			ulta.Ability.Deactivate(item.Entity.ID)
@@ -272,14 +293,14 @@ func (s *ultimatesSystem) Update(dt float32) {
 type battleSystem struct{}
 
 func (s *battleSystem) Update(dt float32) {
-	query := ecsManager.Query(ecs.BuildTag(targetC, statC, positionC))
+	query := ecsManager.Query(ecs.BuildTag(targetC, statC, positionC, ultaC))
 
 	for _, item := range query {
 		currentTarget := item.Components[targetC].(*TargetComponent)
 		stats := item.Components[statC].(*StatsComponent)
 		position := item.Components[positionC].(*PositionComponent)
 
-		target := ecsManager.GetEntityByID(currentTarget.TargetID, statC, positionC)
+		target := ecsManager.GetEntityByID(currentTarget.TargetID, statC, positionC, ultaC)
 		if target == nil {
 			currentTarget.TargetID = 0
 			continue
@@ -317,10 +338,14 @@ func (s *battleSystem) Update(dt float32) {
 		if rand.Int31n(100)+1 <= targetStats.Dodge {
 			targetPosition.X += (x2 - x1) / d * 1 * targetStats.DodgeRange
 			targetPosition.Y += (y2 - y1) / d * 1 * targetStats.DodgeRange
+			targetUlta := target.Components[ultaC].(*UltimateComponent)
+			targetUlta.Charge += targetUlta.DodgeInc
 			continue
 		}
 
 		targetStats.Health = targetStats.Health - int32((float32(stats.Damage) / targetStats.Resist))
+		ulta := item.Components[ultaC].(*UltimateComponent)
+		ulta.Charge = ulta.Charge + ulta.HitInc
 		if targetStats.Health <= 0 {
 			ecsManager.DisposeEntity(target.Entity)
 		}
