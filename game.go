@@ -34,6 +34,31 @@ func (a *RageAbility) Deactivate(id ecs.EntityID) {
 	stats.Cooldown = stats.Cooldown * 3
 }
 
+type SnipeAbility struct{}
+
+func (a *SnipeAbility) Activate(id ecs.EntityID) {
+	item := ecsManager.GetEntityByID(id, statC)
+	stats := item.Components[statC].(*StatsComponent)
+
+	stats.Resist = 0.5
+	stats.Cooldown = 3000
+	stats.AttackRange = 400
+	stats.Dodge = 60
+	stats.Damage = 100
+	stats.DodgeRange = 50
+}
+func (a *SnipeAbility) Deactivate(id ecs.EntityID) {
+	item := ecsManager.GetEntityByID(id, statC)
+	stats := item.Components[statC].(*StatsComponent)
+
+	stats.Resist = 1
+	stats.Cooldown = 400
+	stats.AttackRange = 300
+	stats.Dodge = 30
+	stats.Damage = 20
+	stats.DodgeRange = 25
+}
+
 type UltimateComponent struct {
 	Cooldown float32 `imgui:"%.1f ms"`
 	Reload   float32 `imgui:"%.1f ms"`
@@ -144,10 +169,16 @@ func createRanger(n string, squad string, x float32, y float32) *ecs.Entity {
 	ecsManager.AddComponent(e, &SquadComponent{
 		Squad: squad,
 	})
-	ecsManager.AddComponent(e, &AliveComponent{})
 	ecsManager.AddComponent(e, &UltimateComponent{
-		Ability: &DummyAbility{},
+		Cooldown: 10000,
+		Ability:  &SnipeAbility{},
+		Charge:   0,
+		HitInc:   5,
 	})
+	ecsManager.AddComponent(e, &AliveComponent{})
+	//ecsManager.AddComponent(e, &UltimateComponent{
+	//	Ability: &DummyAbility{},
+	//})
 	ecsManager.AddComponent(e, &StatsComponent{
 		MaxHealth:   200,
 		Health:      200,
