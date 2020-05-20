@@ -80,13 +80,18 @@ func gameCanvas() *g.Layout {
 	}
 }
 
+var speedMultiplier float32 = 1
+
 func loop() {
 	size := g.Context.GetPlatform().DisplaySize()
 	g.SingleWindow("main window", g.Layout{
 		// g.Button("Show demo window", func() { demo = true }),
 		g.Line(
 			g.Checkbox("Show demo window", &demo, func() {}),
-			g.SliderInt("Delay", &delayMs, 10, 500, "%d ms"),
+			// g.SliderInt("Delay", &delayMs, 10, 500, "%d ms"),
+			g.Button("Pause", func() { speedMultiplier = 0 }),
+			g.Button("Play", func() { speedMultiplier = 1 }),
+			g.Button("x10", func() { speedMultiplier = 10 }),
 		),
 		g.SplitLayout("Split", g.DirectionHorizontal, false, 300,
 			leftPanel(),
@@ -121,7 +126,7 @@ func main() {
 			t = time.Now()
 
 			for _, s := range systems {
-				s.Update(dt)
+				s.Update(dt * speedMultiplier)
 			}
 
 			time.Sleep(time.Duration(delayMs) * time.Millisecond)
