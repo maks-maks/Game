@@ -89,9 +89,9 @@ func loop() {
 		g.Line(
 			g.Checkbox("Show demo window", &demo, func() {}),
 			// g.SliderInt("Delay", &delayMs, 10, 500, "%d ms"),
-			g.Button("Pause", func() { speedMultiplier = 0 }),
-			g.Button("Play", func() { speedMultiplier = 1 }),
-			g.Button("x10", func() { speedMultiplier = 10 }),
+			g.RadioButton("pause", speedMultiplier == 0, func() { speedMultiplier = 0 }),
+			g.RadioButton("play 1x", speedMultiplier == 1, func() { speedMultiplier = 1 }),
+			g.RadioButton("play 10x", speedMultiplier == 10, func() { speedMultiplier = 10 }),
 		),
 		g.SplitLayout("Split", g.DirectionHorizontal, false, 300,
 			leftPanel(),
