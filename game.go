@@ -134,7 +134,12 @@ type AliveComponent struct {
 type DeadComponent struct {
 }
 
+type NameComponent struct {
+	Name string
+}
+
 var (
+	nameC     *ecs.Component
 	positionC *ecs.Component
 	statC     *ecs.Component
 	targetC   *ecs.Component
@@ -147,6 +152,7 @@ var (
 func setupECS() {
 	ecsManager = NewECSManager()
 
+	nameC = ecsManager.RegisterComponent("name", &NameComponent{})
 	positionC = ecsManager.RegisterComponent("position", &PositionComponent{})
 	statC = ecsManager.RegisterComponent("stats", &StatsComponent{})
 	targetC = ecsManager.RegisterComponent("target", &TargetComponent{})
@@ -179,6 +185,7 @@ func createSquad(squad string, x float32, y float32) {
 }
 func createHealer(n string, squad string, x float32, y float32) *ecs.Entity {
 	e := ecsManager.NewEntity()
+	ecsManager.AddComponent(e, &NameComponent{Name: n})
 	ecsManager.AddComponent(e, &PositionComponent{
 		X: x + rand.Float32()*200 - 100,
 		Y: y + rand.Float32()*200 - 100,
@@ -214,6 +221,7 @@ func createHealer(n string, squad string, x float32, y float32) *ecs.Entity {
 }
 func createRanger(n string, squad string, x float32, y float32) *ecs.Entity {
 	e := ecsManager.NewEntity()
+	ecsManager.AddComponent(e, &NameComponent{Name: n})
 	ecsManager.AddComponent(e, &PositionComponent{
 		X: x + rand.Float32()*200 - 100,
 		Y: y + rand.Float32()*200 - 100,
@@ -249,6 +257,7 @@ func createRanger(n string, squad string, x float32, y float32) *ecs.Entity {
 
 func createTank(n string, squad string, x float32, y float32) *ecs.Entity {
 	e := ecsManager.NewEntity()
+	ecsManager.AddComponent(e, &NameComponent{Name: n})
 	ecsManager.AddComponent(e, &PositionComponent{
 		X: x + rand.Float32()*200 - 100,
 		Y: y + rand.Float32()*200 - 100,

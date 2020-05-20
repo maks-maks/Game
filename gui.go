@@ -14,17 +14,30 @@ var curEntityID ecs.EntityID = 0
 var delayMs int32 = 30
 
 func leftPanel() *g.Layout {
-	entities := ecsManager.Query(0).Entities()
-	items := make([]string, 0, len(entities))
+	var tag ecs.Tag = 0
 
-	for _, v := range entities {
-		items = append(items, fmt.Sprintf("%d", v.ID))
+	q := ecsManager.Query(tag)
+	items := make([]string, 0, len(q))
+
+	for _, v := range q {
+		nameQ, hasName := v.Entity.GetComponentData(nameC)
+		squadQ, hasSquad := v.Entity.GetComponentData(squadC)
+		if hasName && hasSquad {
+			name := nameQ.(*NameComponent)
+			squad := squadQ.(*SquadComponent)
+			items = append(items, fmt.Sprintf("%d - %s - %s", v.Entity.ID, name.Name, squad.Squad))
+		} else if hasName {
+			name := nameQ.(*NameComponent)
+			items = append(items, fmt.Sprintf("%d - %s", v.Entity.ID, name.Name))
+		} else {
+			items = append(items, fmt.Sprintf("%d", v.Entity.ID))
+		}
 	}
 
 	return &g.Layout{
 		g.ListBox("Entities", items,
 			func(i int) {
-				curEntityID = entities[i].ID
+				curEntityID = q.Entities()[i].ID
 			},
 			func(selectedIndex int) {}),
 	}

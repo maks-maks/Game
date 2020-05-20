@@ -9,10 +9,6 @@ import (
 
 var ecsManager *ECSManager
 
-type NameComponent struct {
-	Name string
-}
-
 type ECSManager struct {
 	ecs.Manager
 	components   []*ecs.Component
