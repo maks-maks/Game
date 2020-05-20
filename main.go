@@ -71,7 +71,7 @@ func gameCanvas() *g.Layout {
 					hbColor := color.RGBA{200, 0, 0, opacity}
 					canvas.AddRectFilled(pMin, pMax, hbColor, 0, giu.CornerFlags_All)
 
-					textPos := pMin
+					textPos := pMin.Add(image.Pt(0, -2))
 					textColor := color.RGBA{0, 0, 0, opacity}
 					canvas.AddText(textPos, textColor, fmt.Sprintf("%d", stats.Health))
 				}
