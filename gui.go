@@ -90,6 +90,9 @@ func entityComponentLayout(e *ecs.Entity, c *ecs.Component) g.Layout {
 				// w := g.DragIntV(f.Name, vf.Addr().Interface().(*int32), 1.0, 0, 0, format)
 				w := LabelText(f.Name, fmt.Sprintf("%d", vf.Interface().(ecs.EntityID)))
 				l = append(l, w)
+			case reflect.Bool:
+				w := g.Checkbox(f.Name, vf.Addr().Interface().(*bool), nil)
+				l = append(l, w)
 			default:
 				w := LabelText(f.Name, fmt.Sprintf("%s isn't not supported", kind.String()))
 				l = append(l, w)
