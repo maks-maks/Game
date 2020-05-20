@@ -59,6 +59,48 @@ func (a *SnipeAbility) Deactivate(id ecs.EntityID) {
 	stats.DodgeRange = 25
 }
 
+type ReviveAbility struct{}
+
+func (a *ReviveAbility) Activate(id ecs.EntityID) {
+	item := ecsManager.GetEntityByID(id, statC, squadC)
+	// stats := item.Components[statC].(*StatsComponent)
+	squad := item.Components[squadC].(*SquadComponent)
+
+	entities := ecsManager.Query(ecs.BuildTag(squadC, statC, positionC, deadC))
+
+	for _, item := range entities {
+		targetSquad := item.Components[squadC].(*SquadComponent)
+		targetStats := item.Components[statC].(*StatsComponent)
+		// targetPosition := item.Components[positionC].(*PositionComponent)
+
+		if squad.Squad != targetSquad.Squad {
+			continue
+		}
+
+		item.Entity.RemoveComponent(deadC)
+		item.Entity.AddComponent(aliveC, &AliveComponent{})
+		targetStats.Health = targetStats.MaxHealth / 2
+	}
+
+	// stats.Resist = 0.5
+	// stats.Cooldown = 3000
+	// stats.AttackRange = 400
+	// stats.Dodge = 60
+	// stats.Damage = 100
+	// stats.DodgeRange = 50
+}
+func (a *ReviveAbility) Deactivate(id ecs.EntityID) {
+	// item := ecsManager.GetEntityByID(id, statC)
+	// stats := item.Components[statC].(*StatsComponent)
+
+	// stats.Resist = 1
+	// stats.Cooldown = 400
+	// stats.AttackRange = 300
+	// stats.Dodge = 30
+	// stats.Damage = 20
+	// stats.DodgeRange = 25
+}
+
 type UltimateComponent struct {
 	Cooldown float32 `imgui:"%.1f ms"`
 	Reload   float32 `imgui:"%.1f ms"`
@@ -89,6 +131,8 @@ type SquadComponent struct {
 }
 type AliveComponent struct {
 }
+type DeadComponent struct {
+}
 
 var (
 	positionC *ecs.Component
@@ -97,6 +141,7 @@ var (
 	squadC    *ecs.Component
 	ultaC     *ecs.Component
 	aliveC    *ecs.Component
+	deadC     *ecs.Component
 )
 
 func setupECS() {
@@ -108,6 +153,7 @@ func setupECS() {
 	squadC = ecsManager.RegisterComponent("squad", &SquadComponent{})
 	ultaC = ecsManager.RegisterComponent("ulta", &UltimateComponent{})
 	aliveC = ecsManager.RegisterComponent("alive", &AliveComponent{})
+	deadC = ecsManager.RegisterComponent("dead", &DeadComponent{})
 	//createTank("Frederik", "a", 100, 100)
 	//createRanger("Legolas", "b", 400, 400)
 	// for i := 1; i < 5; i++ {
@@ -143,6 +189,12 @@ func createHealer(n string, squad string, x float32, y float32) *ecs.Entity {
 	ecsManager.AddComponent(e, &AliveComponent{})
 	ecsManager.AddComponent(e, &UltimateComponent{
 		Ability: &DummyAbility{},
+	})
+	ecsManager.AddComponent(e, &UltimateComponent{
+		Cooldown: 5000,
+		Ability:  &ReviveAbility{},
+		Charge:   0,
+		HealInc:  25,
 	})
 	ecsManager.AddComponent(e, &StatsComponent{
 		MaxHealth:   200,
@@ -367,8 +419,11 @@ func (s *battleSystem) Update(dt float32) {
 		stats.Reload = 0
 		if stats.Heal > 0 {
 			targetStats.Health = targetStats.Health + stats.Heal
+			ulta := item.Components[ultaC].(*UltimateComponent)
+			ulta.Charge = ulta.Charge + ulta.HealInc
 			if targetStats.Health > targetStats.MaxHealth {
 				targetStats.Health = targetStats.MaxHealth
+
 				continue
 			}
 			continue
@@ -386,6 +441,7 @@ func (s *battleSystem) Update(dt float32) {
 		ulta.Charge = ulta.Charge + ulta.HitInc
 		if targetStats.Health <= 0 {
 			target.Entity.RemoveComponent(aliveC)
+			target.Entity.AddComponent(deadC, &DeadComponent{})
 		}
 	}
 }
