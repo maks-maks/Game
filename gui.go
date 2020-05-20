@@ -54,6 +54,11 @@ func entityComponentLayout(e *ecs.Entity, c *ecs.Component) g.Layout {
 	val := reflect.ValueOf(d)
 	val = reflect.Indirect(val)
 
+	return structLayout(val)
+}
+
+func structLayout(val reflect.Value) g.Layout {
+	val = reflect.Indirect(val)
 	typ := val.Type()
 
 	l := make(g.Layout, 0)
@@ -93,6 +98,11 @@ func entityComponentLayout(e *ecs.Entity, c *ecs.Component) g.Layout {
 			case reflect.Bool:
 				w := g.Checkbox(f.Name, vf.Addr().Interface().(*bool), nil)
 				l = append(l, w)
+			case reflect.Interface:
+				q := reflect.ValueOf(vf.Interface())
+				name := fmt.Sprintf("%s (%s)", f.Name, q.String())
+				n := g.TreeNode(name, g.TreeNodeFlagsDefaultOpen, structLayout(q))
+				l = append(l, n)
 			default:
 				w := LabelText(f.Name, fmt.Sprintf("%s isn't not supported", kind.String()))
 				l = append(l, w)
