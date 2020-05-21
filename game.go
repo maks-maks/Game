@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 
@@ -79,6 +80,7 @@ func (a *ReviveAbility) Activate(id ecs.EntityID) {
 
 		item.Entity.RemoveComponent(deadC)
 		item.Entity.AddComponent(aliveC, &AliveComponent{})
+		log = append(log, fmt.Sprintf("%d revived %d with arrow", id, item.Entity.ID))
 		targetStats.Health = targetStats.MaxHealth / 2
 	}
 
@@ -366,6 +368,7 @@ func (s *arrowSystem) Update(dt float32) {
 			if targetstats.Health <= 0 {
 				target.Entity.RemoveComponent(aliveC)
 				target.Entity.AddComponent(deadC, &DeadComponent{})
+				log = append(log, fmt.Sprintf("%d killed %d with arrow", item.Entity.ID, target.Entity.ID))
 			}
 		}
 	}
@@ -515,6 +518,7 @@ func (s *battleSystem) Update(dt float32) {
 		if targetStats.Health <= 0 {
 			target.Entity.RemoveComponent(aliveC)
 			target.Entity.AddComponent(deadC, &DeadComponent{})
+			log = append(log, fmt.Sprintf("%d killed %d", item.Entity.ID, target.Entity.ID))
 		}
 	}
 }

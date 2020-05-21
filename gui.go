@@ -12,8 +12,9 @@ import (
 var demo = false
 var curEntityID ecs.EntityID = 0
 var delayMs int32 = 30
+var log []string
 
-func leftPanel() *g.Layout {
+func leftPanel() g.Widget {
 	var tag ecs.Tag = 0
 
 	q := ecsManager.Query(tag)
@@ -34,13 +35,18 @@ func leftPanel() *g.Layout {
 		}
 	}
 
-	return &g.Layout{
-		g.ListBox("Entities", items,
-			func(i int) {
-				curEntityID = q.Entities()[i].ID
-			},
-			func(selectedIndex int) {}),
-	}
+	return g.TabBar("LeftTabBar", g.Layout{
+		g.TabItem("Enitites", g.Layout{
+			g.ListBox("Entities", items,
+				func(i int) {
+					curEntityID = q.Entities()[i].ID
+				},
+				func(selectedIndex int) {}),
+		}),
+		g.TabItem("Log", g.Layout{
+			g.ListBox("logs", log, nil, nil),
+		}),
+	})
 }
 
 func rightPanel() *g.Layout {
