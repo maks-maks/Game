@@ -98,17 +98,25 @@ func gameCanvas() *g.Layout {
 }
 
 var speedMultiplier float32 = 1
+var paused float32 = 0
 
 func loop() {
 	size := g.Context.GetPlatform().DisplaySize()
+	var playPauseButton g.Widget
+	if paused != 0 {
+		playPauseButton = g.Button(" pause ", func() { paused = 0 })
+	} else {
+		playPauseButton = g.Button(" play  ", func() { paused = 1 })
+	}
 	g.SingleWindow("main window", g.Layout{
 		// g.Button("Show demo window", func() { demo = true }),
 		g.Line(
 			g.Checkbox("Show demo window", &demo, func() {}),
 			// g.SliderInt("Delay", &delayMs, 10, 500, "%d ms"),
-			g.RadioButton("pause", speedMultiplier == 0, func() { speedMultiplier = 0 }),
-			g.RadioButton("play 1x", speedMultiplier == 1, func() { speedMultiplier = 1 }),
-			g.RadioButton("play 10x", speedMultiplier == 10, func() { speedMultiplier = 10 }),
+			playPauseButton,
+			g.RadioButton("0.2x", speedMultiplier == 0.2, func() { speedMultiplier = 0.2 }),
+			g.RadioButton("1x", speedMultiplier == 1, func() { speedMultiplier = 1 }),
+			g.RadioButton("10x", speedMultiplier == 10, func() { speedMultiplier = 10 }),
 		),
 		g.SplitLayout("Split", g.DirectionHorizontal, false, 300,
 			leftPanel(),
@@ -144,7 +152,7 @@ func main() {
 			t = time.Now()
 
 			for _, s := range systems {
-				s.Update(dt * speedMultiplier)
+				s.Update(dt * speedMultiplier * (1 - paused))
 			}
 
 			time.Sleep(time.Duration(delayMs) * time.Millisecond)
