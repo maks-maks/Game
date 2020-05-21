@@ -362,9 +362,14 @@ func (s *arrowSystem) Update(dt float32) {
 		d = distance(position, targetPosition)
 
 		if d < 15 {
-			targetstats := target.Components[statC].(*StatsComponent)
-			targetstats.Health -= arrow.Damage
 			ecsManager.DisposeEntity(item.Entity)
+
+			targetstats := target.Components[statC].(*StatsComponent)
+			if targetstats.Health <= 0 {
+				continue
+			}
+
+			targetstats.Health -= arrow.Damage
 			if targetstats.Health <= 0 {
 				target.Entity.RemoveComponent(aliveC)
 				target.Entity.AddComponent(deadC, &DeadComponent{})
@@ -394,8 +399,6 @@ func (s *movementSystem) Update(dt float32) {
 		x1, y1, x2, y2 := position.X, position.Y, targetPosition.X, targetPosition.Y
 
 		d := distance(position, targetPosition)
-		position.D = d
-
 		if d < stats.AttackRange {
 			continue
 		}

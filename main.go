@@ -16,7 +16,6 @@ import (
 type PositionComponent struct {
 	X float32
 	Y float32
-	D float32
 }
 
 func renderSystem() {
