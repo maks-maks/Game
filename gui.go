@@ -71,6 +71,9 @@ func entityComponentLayout(e *ecs.Entity, c *ecs.Component) g.Layout {
 }
 
 func structLayout(val reflect.Value) g.Layout {
+	if val.IsZero() {
+		return g.Layout{}
+	}
 	val = reflect.Indirect(val)
 	typ := val.Type()
 

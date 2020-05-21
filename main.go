@@ -16,6 +16,7 @@ import (
 type PositionComponent struct {
 	X float32
 	Y float32
+	D float32
 }
 
 func renderSystem() {
@@ -76,6 +77,23 @@ func gameCanvas() *g.Layout {
 					canvas.AddText(textPos, textColor, fmt.Sprintf("%d", stats.Health))
 				}
 			}
+
+			q = ecsManager.Query(ecs.BuildTag(positionC, arrowC))
+
+			for _, item := range q {
+				data := item.Components[positionC].(*PositionComponent)
+
+				canvas := g.GetCanvas()
+				pos := g.GetCursorScreenPos()
+				p0 := pos.Add(image.Pt(int(data.X), int(data.Y)))
+
+				opacity := uint8(255)
+
+				var circleColor color.RGBA
+				circleColor = color.RGBA{255, 255, 255, opacity}
+				r := 5
+				canvas.AddCircleFilled(p0, float32(r), circleColor)
+			}
 		}),
 	}
 }
@@ -117,6 +135,7 @@ func main() {
 		&movementSystem{},
 		&ultimatesSystem{},
 		&battleSystem{},
+		&arrowSystem{},
 	}
 
 	go func() {

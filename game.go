@@ -137,6 +137,9 @@ type DeadComponent struct {
 type NameComponent struct {
 	Name string
 }
+type ArrowComponent struct {
+	Damage int32
+}
 
 var (
 	nameC     *ecs.Component
@@ -147,6 +150,7 @@ var (
 	ultaC     *ecs.Component
 	aliveC    *ecs.Component
 	deadC     *ecs.Component
+	arrowC    *ecs.Component
 )
 
 func setupECS() {
@@ -160,10 +164,11 @@ func setupECS() {
 	ultaC = ecsManager.RegisterComponent("ulta", &UltimateComponent{})
 	aliveC = ecsManager.RegisterComponent("alive", &AliveComponent{})
 	deadC = ecsManager.RegisterComponent("dead", &DeadComponent{})
+	arrowC = ecsManager.RegisterComponent("arrow", &ArrowComponent{})
 	//createTank("Frederik", "a", 100, 100)
 	//createRanger("Legolas", "b", 400, 400)
 	// for i := 1; i < 5; i++ {
-	createSquad("Geroi", 400, 400)
+	createSquad("Geroi", 500, 500)
 	createSquad("Sandali", 100, 100)
 	//createSquad("Angels", 400, 100)
 	//createSquad("Daemons", 100, 400)
@@ -328,6 +333,45 @@ func (s *targetingSystem) Update(dt float32) {
 	}
 }
 
+type arrowSystem struct{}
+
+func (s *arrowSystem) Update(dt float32) {
+	query := ecsManager.Query(ecs.BuildTag(targetC, positionC, arrowC))
+	for _, item := range query {
+		position := item.Components[positionC].(*PositionComponent)
+		currentTarget := item.Components[targetC].(*TargetComponent)
+		arrow := item.Components[arrowC].(*ArrowComponent)
+
+		target := ecsManager.GetEntityByID(currentTarget.TargetID, positionC, statC)
+		if target == nil {
+			currentTarget.TargetID = 0
+			ecsManager.DisposeEntity(item.Entity)
+			continue
+		}
+
+		targetPosition := target.Components[positionC].(*PositionComponent)
+		x1, y1, x2, y2 := position.X, position.Y, targetPosition.X, targetPosition.Y
+
+		d := distance(position, targetPosition)
+
+		position.X += (x2 - x1) / d * dt / 5
+		position.Y += (y2 - y1) / d * dt / 5
+
+		d = distance(position, targetPosition)
+
+		if d < 15 {
+			targetstats := target.Components[statC].(*StatsComponent)
+			targetstats.Health -= arrow.Damage
+			ecsManager.DisposeEntity(item.Entity)
+			if targetstats.Health <= 0 {
+				target.Entity.RemoveComponent(aliveC)
+				target.Entity.AddComponent(deadC, &DeadComponent{})
+			}
+		}
+	}
+
+}
+
 type movementSystem struct{}
 
 func (s *movementSystem) Update(dt float32) {
@@ -347,6 +391,7 @@ func (s *movementSystem) Update(dt float32) {
 		x1, y1, x2, y2 := position.X, position.Y, targetPosition.X, targetPosition.Y
 
 		d := distance(position, targetPosition)
+		position.D = d
 
 		if d < stats.AttackRange {
 			continue
@@ -387,6 +432,20 @@ func (s *ultimatesSystem) Update(dt float32) {
 			ulta.Active = true
 		}
 	}
+}
+func createArrow(targetID ecs.EntityID, x float32, y float32, damage int32) *ecs.Entity {
+	e := ecsManager.NewEntity()
+
+	ecsManager.AddComponent(e, &PositionComponent{
+		X: x,
+		Y: y,
+	})
+	ecsManager.AddComponent(e, &ArrowComponent{
+		Damage: damage,
+	})
+
+	ecsManager.AddComponent(e, &TargetComponent{TargetID: targetID})
+	return e
 }
 
 type battleSystem struct{}
@@ -435,6 +494,11 @@ func (s *battleSystem) Update(dt float32) {
 
 				continue
 			}
+			continue
+		}
+
+		if stats.AttackRange > 75 {
+			createArrow(target.Entity.ID, position.X, position.Y, stats.Damage)
 			continue
 		}
 		if rand.Int31n(100)+1 <= targetStats.Dodge {
