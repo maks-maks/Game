@@ -77,7 +77,7 @@ func entityComponentLayout(e *ecs.Entity, c *ecs.Component) g.Layout {
 }
 
 func structLayout(val reflect.Value) g.Layout {
-	if val.IsZero() {
+	if !val.IsValid() {
 		return g.Layout{}
 	}
 	val = reflect.Indirect(val)
