@@ -14,8 +14,10 @@ import (
 )
 
 type PositionComponent struct {
-	X float32
-	Y float32
+	X      float32
+	Y      float32
+	XSpeed float32
+	YSpeed float32
 }
 
 func renderSystem() {
@@ -135,6 +137,7 @@ func main() {
 
 	systems := []System{
 		&targetingSystem{},
+		&chasingSystem{},
 		&movementSystem{},
 		&ultimatesSystem{},
 		&battleSystem{},

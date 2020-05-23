@@ -340,6 +340,36 @@ func (s *targetingSystem) Update(dt float32) {
 	}
 }
 
+type chasingSystem struct{}
+
+func (s *chasingSystem) Update(dt float32) {
+	query := ecsManager.Query(ecs.BuildTag(targetC, positionC, statC, aliveC))
+	for _, item := range query {
+		position := item.Components[positionC].(*PositionComponent)
+		currentTarget := item.Components[targetC].(*TargetComponent)
+		stats := item.Components[statC].(*StatsComponent)
+
+		target := ecsManager.GetEntityByID(currentTarget.TargetID, positionC)
+		if target == nil {
+			currentTarget.TargetID = 0
+			continue
+		}
+
+		targetPosition := target.Components[positionC].(*PositionComponent)
+		x1, y1, x2, y2 := position.X, position.Y, targetPosition.X, targetPosition.Y
+
+		d := distance(position, targetPosition)
+		if d < stats.AttackRange {
+			position.XSpeed = 0
+			position.YSpeed = 0
+			continue
+		}
+
+		position.XSpeed = (x2 - x1) / d / 30
+		position.YSpeed = (y2 - y1) / d / 30
+	}
+}
+
 type arrowSystem struct{}
 
 func (s *arrowSystem) Update(dt float32) {
@@ -397,30 +427,32 @@ func (s *arrowSystem) Update(dt float32) {
 type movementSystem struct{}
 
 func (s *movementSystem) Update(dt float32) {
-	query := ecsManager.Query(ecs.BuildTag(targetC, positionC, statC, aliveC))
+	// query := ecsManager.Query(ecs.BuildTag(targetC, positionC, statC, aliveC))
+	query := ecsManager.Query(ecs.BuildTag(positionC))
 	for _, item := range query {
 		position := item.Components[positionC].(*PositionComponent)
-		currentTarget := item.Components[targetC].(*TargetComponent)
-		stats := item.Components[statC].(*StatsComponent)
+		position.X += dt * position.XSpeed
+		position.Y += dt * position.YSpeed
+		// currentTarget := item.Components[targetC].(*TargetComponent)
+		// stats := item.Components[statC].(*StatsComponent)
 
-		target := ecsManager.GetEntityByID(currentTarget.TargetID, positionC)
-		if target == nil {
-			currentTarget.TargetID = 0
-			continue
-		}
+		// target := ecsManager.GetEntityByID(currentTarget.TargetID, positionC)
+		// if target == nil {
+		// 	currentTarget.TargetID = 0
+		// 	continue
+		// }
 
-		targetPosition := target.Components[positionC].(*PositionComponent)
-		x1, y1, x2, y2 := position.X, position.Y, targetPosition.X, targetPosition.Y
+		// targetPosition := target.Components[positionC].(*PositionComponent)
+		// x1, y1, x2, y2 := position.X, position.Y, targetPosition.X, targetPosition.Y
 
-		d := distance(position, targetPosition)
-		if d < stats.AttackRange {
-			continue
-		}
+		// d := distance(position, targetPosition)
+		// if d < stats.AttackRange {
+		// 	continue
+		// }
 
-		position.X += (x2 - x1) / d * dt / 30
-		position.Y += (y2 - y1) / d * dt / 30
+		// position.X += (x2 - x1) / d * dt / 30
+		// position.Y += (y2 - y1) / d * dt / 30
 	}
-
 }
 
 func distance(a, b *PositionComponent) float32 {
