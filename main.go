@@ -55,13 +55,9 @@ func gameCanvas() *g.Layout {
 				}
 				r := 25
 				canvas.AddCircleFilled(p0, float32(r), circleColor)
-				canvas.AddRectFilled(
-					p0.Add(image.Pt(-3, 20)), // top left
-					p0.Add(image.Pt(3, 150)), // bottom right
-					circleColor,              // color
-					0,
-					giu.CornerFlags_All,
-				)
+				if curEntityID == item.Entity.ID {
+					canvas.AddCircle(p0, float32(r+3), color.RGBA{50, 255, 50, 255}, 3)
+				}
 				// Healthbar
 				if stats.Health > 0 {
 					width := r * 2 * int(stats.Health) / int(stats.MaxHealth)
