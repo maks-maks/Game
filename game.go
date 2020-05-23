@@ -127,6 +127,7 @@ type StatsComponent struct {
 	AttackRange float32
 	DodgeRange  float32
 	Resist      float32
+	ArrowDodge  int32
 }
 type SquadComponent struct {
 	Squad string
@@ -186,7 +187,8 @@ func setupECS() {
 
 func createSquad(squad string, x float32, y float32) {
 	createHealer("Angel", squad, x, y)
-	createRanger("Legolas", squad, x, y)
+
+	createRanger("Legolas9", squad, x, y)
 
 	createTank("Frederik", squad, x, y)
 }
@@ -222,6 +224,7 @@ func createHealer(n string, squad string, x float32, y float32) *ecs.Entity {
 		DodgeRange:  30,
 		Heal:        100,
 		Resist:      1,
+		ArrowDodge:  10,
 	})
 	ecsManager.AddComponent(e, &TargetComponent{})
 	return e
@@ -257,6 +260,7 @@ func createRanger(n string, squad string, x float32, y float32) *ecs.Entity {
 		AttackRange: 300,
 		DodgeRange:  25,
 		Resist:      1,
+		ArrowDodge:  20,
 	})
 	ecsManager.AddComponent(e, &TargetComponent{})
 	return e
@@ -290,6 +294,7 @@ func createTank(n string, squad string, x float32, y float32) *ecs.Entity {
 		AttackRange: 75,
 		DodgeRange:  -25,
 		Resist:      1,
+		ArrowDodge:  5,
 	})
 	ecsManager.AddComponent(e, &TargetComponent{})
 	return e
@@ -366,6 +371,15 @@ func (s *arrowSystem) Update(dt float32) {
 
 			targetstats := target.Components[statC].(*StatsComponent)
 			if targetstats.Health <= 0 {
+				continue
+			}
+			if rand.Int31n(100)+1 <= targetstats.ArrowDodge {
+				dx := (x2 - x1) / d * 1 * targetstats.DodgeRange
+				dy := (y2 - y1) / d * 1 * targetstats.DodgeRange
+
+				targetPosition.X += -dy
+				targetPosition.Y += dx
+
 				continue
 			}
 
