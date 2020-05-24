@@ -18,6 +18,7 @@ type PositionComponent struct {
 	Y      float32
 	XSpeed float32
 	YSpeed float32
+	Debug  string
 }
 
 func renderSystem() {
@@ -88,8 +89,20 @@ func gameCanvas() *g.Layout {
 
 				var circleColor color.RGBA
 				circleColor = color.RGBA{255, 255, 255, opacity}
-				r := 5
-				canvas.AddCircleFilled(p0, float32(r), circleColor)
+				// r := 5
+				n := float32(20)
+				vd := distanceXY(0, 0, data.XSpeed, data.YSpeed)
+				vx := data.XSpeed / vd
+				vy := data.YSpeed / vd
+				data.Debug = fmt.Sprintf("v(%v %v) d:%v  vx:%v vy:%v", data.XSpeed, data.YSpeed, vd, vx, vy)
+				pb := p0.Add(image.Pt(int(-vx*n), int(-vy*n)))
+
+				p1 := pb.Add(image.Pt(int(-vy*n/2), int(vx*n/2)))
+				p2 := pb.Add(image.Pt(int(vy*n/2), int(-vx*n/2)))
+				p3 := p0.Add(image.Pt(int(-vx*n*2), int(-vy*n*2)))
+
+				canvas.AddTriangleFilled(p0, p1, p2, circleColor)
+				canvas.AddLine(p0, p3, circleColor, 5)
 			}
 
 			if showSpeed {
