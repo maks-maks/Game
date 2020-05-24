@@ -91,12 +91,29 @@ func gameCanvas() *g.Layout {
 				r := 5
 				canvas.AddCircleFilled(p0, float32(r), circleColor)
 			}
+
+			if showSpeed {
+				q = ecsManager.Query(ecs.BuildTag(positionC))
+
+				for _, item := range q {
+					data := item.Components[positionC].(*PositionComponent)
+
+					canvas := g.GetCanvas()
+					pos := g.GetCursorScreenPos()
+					p0 := pos.Add(image.Pt(int(data.X), int(data.Y)))
+
+					color := color.RGBA{255, 100, 100, 255}
+					// canvas.AddCircleFilled(p0, float32(r), circleColor)
+					canvas.AddLine(p0, p0.Add(image.Pt(int(data.XSpeed*300), int(data.YSpeed*300))), color, 2)
+				}
+			}
 		}),
 	}
 }
 
 var speedMultiplier float32 = 1
 var paused float32 = 0
+var showSpeed bool = false
 
 func loop() {
 	size := g.Context.GetPlatform().DisplaySize()
@@ -115,6 +132,7 @@ func loop() {
 			g.RadioButton("0.2x", speedMultiplier == 0.2, func() { speedMultiplier = 0.2 }),
 			g.RadioButton("1x", speedMultiplier == 1, func() { speedMultiplier = 1 }),
 			g.RadioButton("10x", speedMultiplier == 10, func() { speedMultiplier = 10 }),
+			g.Checkbox("Show speed", &showSpeed, nil),
 		),
 		g.SplitLayout("Split", g.DirectionHorizontal, false, 300,
 			leftPanel(),
