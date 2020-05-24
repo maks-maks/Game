@@ -391,9 +391,6 @@ func (s *arrowSystem) Update(dt float32) {
 
 		d := distance(position, targetPosition)
 
-		position.X += (x2 - x1) / d * dt / 5
-		position.Y += (y2 - y1) / d * dt / 5
-
 		d = distance(position, targetPosition)
 
 		if d < 15 {
@@ -460,6 +457,11 @@ func distance(a, b *PositionComponent) float32 {
 	return float32(math.Sqrt(float64(d2)))
 }
 
+func distanceXY(x1, y1, x2, y2 float32) float32 {
+	d2 := (x2-x1)*(x2-x1) + (y2-y1)*(y2-y1)
+	return float32(math.Sqrt(float64(d2)))
+}
+
 type ultimatesSystem struct{}
 
 func (s *ultimatesSystem) Update(dt float32) {
@@ -485,12 +487,16 @@ func (s *ultimatesSystem) Update(dt float32) {
 		}
 	}
 }
-func createArrow(targetID ecs.EntityID, x float32, y float32, damage int32) *ecs.Entity {
+func createArrow(targetID ecs.EntityID, x float32, y float32, damage int32, x2 float32, y2 float32) *ecs.Entity {
+	d := distanceXY(x, y, x2, y2)
+
 	e := ecsManager.NewEntity()
 
 	ecsManager.AddComponent(e, &PositionComponent{
-		X: x,
-		Y: y,
+		X:      x,
+		Y:      y,
+		XSpeed: (x2 - x) / d,
+		YSpeed: (y2 - y) / d,
 	})
 	ecsManager.AddComponent(e, &ArrowComponent{
 		Damage: damage,
@@ -550,7 +556,7 @@ func (s *battleSystem) Update(dt float32) {
 		}
 
 		if stats.AttackRange > 75 {
-			createArrow(target.Entity.ID, position.X, position.Y, stats.Damage)
+			createArrow(target.Entity.ID, position.X, position.Y, stats.Damage, x2, y2)
 			continue
 		}
 		if rand.Int31n(100)+1 <= targetStats.Dodge {
