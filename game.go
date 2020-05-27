@@ -154,6 +154,7 @@ var (
 	aliveC    *ecs.Component
 	deadC     *ecs.Component
 	arrowC    *ecs.Component
+	stateC    *ecs.Component
 )
 
 func setupECS() {
@@ -168,6 +169,7 @@ func setupECS() {
 	aliveC = ecsManager.RegisterComponent("alive", &AliveComponent{})
 	deadC = ecsManager.RegisterComponent("dead", &DeadComponent{})
 	arrowC = ecsManager.RegisterComponent("arrow", &ArrowComponent{})
+	stateC = ecsManager.RegisterComponent("state", &StateComponent{})
 	//createTank("Frederik", "a", 100, 100)
 	//createRanger("Legolas", "b", 400, 400)
 	// for i := 1; i < 5; i++ {
@@ -202,6 +204,9 @@ func createHealer(n string, squad string, x float32, y float32) *ecs.Entity {
 	ecsManager.AddComponent(e, &SquadComponent{
 		Squad: squad,
 	})
+	ecsManager.AddComponent(e, &StateComponent{
+		State: "idle",
+	})
 	ecsManager.AddComponent(e, &AliveComponent{})
 	ecsManager.AddComponent(e, &UltimateComponent{
 		Ability: &DummyAbility{},
@@ -232,6 +237,9 @@ func createHealer(n string, squad string, x float32, y float32) *ecs.Entity {
 func createRanger(n string, squad string, x float32, y float32) *ecs.Entity {
 	e := ecsManager.NewEntity()
 	ecsManager.AddComponent(e, &NameComponent{Name: n})
+	ecsManager.AddComponent(e, &StateComponent{
+		State: "idle",
+	})
 	ecsManager.AddComponent(e, &PositionComponent{
 		X: x + rand.Float32()*200 - 100,
 		Y: y + rand.Float32()*200 - 100,
@@ -269,6 +277,10 @@ func createRanger(n string, squad string, x float32, y float32) *ecs.Entity {
 func createTank(n string, squad string, x float32, y float32) *ecs.Entity {
 	e := ecsManager.NewEntity()
 	ecsManager.AddComponent(e, &NameComponent{Name: n})
+	ecsManager.AddComponent(e, &StateComponent{
+		State: "idle",
+	})
+
 	ecsManager.AddComponent(e, &PositionComponent{
 		X: x + rand.Float32()*200 - 100,
 		Y: y + rand.Float32()*200 - 100,

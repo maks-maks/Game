@@ -33,7 +33,7 @@ func gameCanvas() *g.Layout {
 	return &g.Layout{
 		// g.Label("Canvas demo"),
 		g.Custom(func() {
-			q := ecsManager.Query(ecs.BuildTag(positionC, statC))
+			q := ecsManager.Query(ecs.BuildTag(positionC, statC, stateC))
 
 			for _, item := range q {
 				data := item.Components[positionC].(*PositionComponent)
@@ -73,6 +73,12 @@ func gameCanvas() *g.Layout {
 					textPos := pMin.Add(image.Pt(0, -2))
 					textColor := color.RGBA{0, 0, 0, opacity}
 					canvas.AddText(textPos, textColor, fmt.Sprintf("%d", stats.Health))
+				}
+
+				if true {
+					state := item.Components[stateC].(*StateComponent)
+					statePos := p0.Add(image.Pt(-r, +r+5))
+					canvas.AddText(statePos, color.RGBA{0, 0, 0, 255}, fmt.Sprintf("%v", state.State))
 				}
 			}
 
