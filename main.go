@@ -182,14 +182,32 @@ func main() {
 	}
 
 	go func() {
+		ecsManager.events.Publish("example")
+		ecsManager.events.Schedule("example 5s", time.Now().Add(time.Second*5))
+		ecsManager.events.Schedule("example 3s", time.Now().Add(time.Second*3))
+	}()
+
+	go func() {
 		t := time.Now()
 		for {
 			dt := float32(time.Since(t).Milliseconds())
 			t = time.Now()
 
+			ecsManager.events.AdvanceScheduled()
+
+			for _, s := range systems {
+				if ep, ok := s.(interface {
+					ProcessEvents(EventBus)
+				}); ok {
+					ep.ProcessEvents(ecsManager.events)
+				}
+			}
+
 			for _, s := range systems {
 				s.Update(dt * speedMultiplier * (1 - paused))
 			}
+
+			ecsManager.events.ClearQueue()
 
 			time.Sleep(time.Duration(delayMs) * time.Millisecond)
 			g.Update()
