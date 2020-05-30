@@ -384,6 +384,13 @@ func (s *chasingSystem) Update(dt float32) {
 
 type arrowSystem struct{}
 
+func (s *arrowSystem) ProcessEvents(b EventBus) {
+	b.Iterate(func(e Event) bool {
+		log = append(log, fmt.Sprintf("got event %v", e))
+		return true
+	})
+}
+
 func (s *arrowSystem) Update(dt float32) {
 	query := ecsManager.Query(ecs.BuildTag(targetC, positionC, arrowC))
 	for _, item := range query {

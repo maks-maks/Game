@@ -11,6 +11,7 @@ var ecsManager *ECSManager
 
 type ECSManager struct {
 	ecs.Manager
+	events       EventBus
 	components   []*ecs.Component
 	componentMap map[string]*ecs.Component
 	nameMap      map[*ecs.Component]string
