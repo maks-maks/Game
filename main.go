@@ -180,6 +180,7 @@ func main() {
 		&battleSystem{},
 		&dodgeSystem{},
 		&arrowSystem{},
+		&aliveSystem{},
 	}
 
 	go func() {

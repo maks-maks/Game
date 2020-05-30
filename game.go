@@ -64,32 +64,21 @@ type ReviveAbility struct{}
 
 func (a *ReviveAbility) Activate(id ecs.EntityID) {
 	item := ecsManager.GetEntityByID(id, statC, squadC)
-	// stats := item.Components[statC].(*StatsComponent)
 	squad := item.Components[squadC].(*SquadComponent)
 
 	entities := ecsManager.Query(ecs.BuildTag(squadC, statC, positionC, deadC))
 
 	for _, item := range entities {
 		targetSquad := item.Components[squadC].(*SquadComponent)
-		targetStats := item.Components[statC].(*StatsComponent)
-		// targetPosition := item.Components[positionC].(*PositionComponent)
 
 		if squad.Squad != targetSquad.Squad {
 			continue
 		}
 
-		item.Entity.RemoveComponent(deadC)
-		item.Entity.AddComponent(aliveC, &AliveComponent{})
-		log = append(log, fmt.Sprintf("%d revived %d with arrow", id, item.Entity.ID))
-		targetStats.Health = targetStats.MaxHealth / 2
+		ecsManager.events.Schedule(&ReviveEvent{
+			EntityID: item.Entity.ID,
+		}, 0)
 	}
-
-	// stats.Resist = 0.5
-	// stats.Cooldown = 3000
-	// stats.AttackRange = 400
-	// stats.Dodge = 60
-	// stats.Damage = 100
-	// stats.DodgeRange = 50
 }
 func (a *ReviveAbility) Deactivate(id ecs.EntityID) {
 	// item := ecsManager.GetEntityByID(id, statC)
@@ -458,20 +447,31 @@ type ultimatesSystem struct{}
 func (s *ultimatesSystem) ProcessEvents(b EventBus) {
 	b.Iterate(func(e Event) bool {
 		switch event := e.(type) {
-		case *UltaChargeEvent:
-			entity := ecsManager.GetEntityByID(event.EntityID, ultaC, aliveC)
-
+		case *DamageEvent:
+			entity := ecsManager.GetEntityByID(event.TargetID, ultaC, aliveC)
+			if entity == nil {
+				return true
+			}
 			ulta, ok := entity.Components[ultaC].(*UltimateComponent)
 			if !ok {
 				return true
 			}
-			if event.EventType == "damage" {
-				ulta.Charge += ulta.HitInc
-			} else if event.EventType == "dodge" {
-				ulta.Charge += ulta.DodgeInc
-			} else if event.EventType == "heal" {
-				ulta.Charge += ulta.HealInc
+			ulta.Charge += ulta.HitInc
+		case *DodgeEvent:
+			entity := ecsManager.GetEntityByID(event.EntityID, ultaC, aliveC)
+			ulta, ok := entity.Components[ultaC].(*UltimateComponent)
+			if !ok {
+				return true
 			}
+			ulta.Charge += ulta.DodgeInc
+		case *HealEvent:
+			entity := ecsManager.GetEntityByID(event.TargetID, ultaC, aliveC)
+			ulta, ok := entity.Components[ultaC].(*UltimateComponent)
+			if !ok {
+				return true
+			}
+
+			ulta.Charge += ulta.HealInc
 		}
 		return true
 	})
@@ -533,17 +533,45 @@ func (s *dodgeSystem) ProcessEvents(b EventBus) {
 
 			position.X += event.Direction[0] * stats.DodgeRange
 			position.Y += event.Direction[1] * stats.DodgeRange
-
-			ecsManager.events.Schedule(&UltaChargeEvent{
-				EntityID:  event.DamagerID,
-				EventType: "dodge",
-			}, 100)
 		}
 		return true
 	})
 }
 
 func (s *dodgeSystem) Update(dt float32) {}
+
+type aliveSystem struct{}
+
+func (s *aliveSystem) ProcessEvents(b EventBus) {
+	b.Iterate(func(e Event) bool {
+		switch event := e.(type) {
+		case *HitEvent:
+			target := ecsManager.GetEntityByID(event.TargetID, statC, aliveC, stateC)
+			if target == nil {
+				return true
+			}
+			targetStats := target.Components[statC].(*StatsComponent)
+			if targetStats.Health <= 0 {
+				target.Entity.RemoveComponent(aliveC)
+				target.Entity.AddComponent(deadC, &DeadComponent{})
+
+				ecsManager.events.Schedule(&DeathEvent{
+					EntityID: target.Entity.ID,
+				}, 0)
+			}
+		case *ReviveEvent:
+			target := ecsManager.GetEntityByID(event.EntityID, statC, deadC, stateC)
+			target.Entity.RemoveComponent(deadC)
+			target.Entity.AddComponent(aliveC, &AliveComponent{})
+
+			targetStats := target.Components[statC].(*StatsComponent)
+			targetStats.Health = targetStats.MaxHealth / 2
+		}
+		return true
+	})
+}
+
+func (s *aliveSystem) Update(dt float32) {}
 
 type battleSystem struct{}
 
@@ -569,24 +597,37 @@ func (s *battleSystem) ProcessEvents(b EventBus) {
 					DamagerID: event.DamagerID,
 					EntityID:  target.Entity.ID,
 					Direction: dir,
-				}, 100)
+				}, 0)
 
 				return true
 			}
 
 			targetStats.Health = targetStats.Health - int32((float32(event.Damage) / targetStats.Resist))
-			ecsManager.events.Schedule(&UltaChargeEvent{
-				EntityID:  event.DamagerID,
-				EventType: "damage",
+			ecsManager.events.Schedule(&DamageEvent{
+				DamagerID: event.DamagerID,
+				TargetID:  target.Entity.ID,
+				Damage:    event.Damage,
 			}, 0)
-			if targetStats.Health <= 0 {
-				target.Entity.RemoveComponent(aliveC)
-				target.Entity.AddComponent(deadC, &DeadComponent{})
-				log = append(log, fmt.Sprintf("%d killed by %d", target.Entity.ID, event.Damage))
-			}
 
 			targetState := target.Components[stateC].(*StateComponent)
 			targetState.State = "idle"
+		case *HealEvent:
+			healer := ecsManager.GetEntityByID(event.HealerID, statC, positionC, aliveC, stateC)
+			if healer == nil {
+				return true
+			}
+			healerStats := healer.Components[statC].(*StatsComponent)
+
+			target := ecsManager.GetEntityByID(event.TargetID, statC, positionC, aliveC, stateC)
+			if target == nil {
+				return true
+			}
+			targetStats := target.Components[statC].(*StatsComponent)
+
+			targetStats.Health = targetStats.Health + healerStats.Heal
+			if targetStats.Health > targetStats.MaxHealth {
+				targetStats.Health = targetStats.MaxHealth
+			}
 		}
 		return true
 	})
@@ -605,13 +646,11 @@ func (s *battleSystem) Update(dt float32) {
 			continue
 		}
 
-		target := ecsManager.GetEntityByID(currentTarget.TargetID, statC, positionC, ultaC, aliveC)
+		target := ecsManager.GetEntityByID(currentTarget.TargetID, statC, positionC, aliveC)
 		if target == nil {
 			currentTarget.TargetID = 0
 			continue
 		}
-
-		targetStats := target.Components[statC].(*StatsComponent)
 
 		if stats.Reload < stats.Cooldown {
 			stats.Reload = stats.Reload + dt
@@ -632,16 +671,11 @@ func (s *battleSystem) Update(dt float32) {
 		stats.Stamina = stats.Stamina - stats.StaminaCost
 		stats.Reload = 0
 		if stats.Heal > 0 {
-			targetStats.Health = targetStats.Health + stats.Heal
-			ecsManager.events.Schedule(&UltaChargeEvent{
-				EntityID:  item.Entity.ID,
-				EventType: "heal",
+			ecsManager.events.Schedule(&HealEvent{
+				HealerID: item.Entity.ID,
+				TargetID: target.Entity.ID,
+				Health:   stats.Heal,
 			}, 0)
-			if targetStats.Health > targetStats.MaxHealth {
-				targetStats.Health = targetStats.MaxHealth
-
-				continue
-			}
 			continue
 		}
 
@@ -671,6 +705,16 @@ func (e HitEvent) String() string {
 	return fmt.Sprintf("{HitEvent %d from %d to %d pos=%v}", e.Damage, e.DamagerID, e.TargetID, e.DamagerPosition)
 }
 
+type DamageEvent struct {
+	DamagerID ecs.EntityID
+	TargetID  ecs.EntityID
+	Damage    int32
+}
+
+func (e DamageEvent) String() string {
+	return fmt.Sprintf("{DamageEvent %d from %d to %d}", e.Damage, e.DamagerID, e.TargetID)
+}
+
 type DodgeEvent struct {
 	DamagerID ecs.EntityID
 	EntityID  ecs.EntityID
@@ -681,11 +725,28 @@ func (e DodgeEvent) String() string {
 	return fmt.Sprintf("{DodgeEvent %d from %d dir=%v}", e.EntityID, e.DamagerID, e.Direction)
 }
 
-type UltaChargeEvent struct {
-	EntityID  ecs.EntityID
-	EventType string // damage, dodge, heal
+type HealEvent struct {
+	HealerID ecs.EntityID
+	TargetID ecs.EntityID
+	Health   int32
 }
 
-func (e UltaChargeEvent) String() string {
-	return fmt.Sprintf("{UltaChargeEvent %d %s}", e.EntityID, e.EventType)
+func (e HealEvent) String() string {
+	return fmt.Sprintf("{HealEvent %d from %d to %d}", e.Health, e.HealerID, e.TargetID)
+}
+
+type DeathEvent struct {
+	EntityID ecs.EntityID
+}
+
+func (e DeathEvent) String() string {
+	return fmt.Sprintf("{DeathEvent %d}", e.EntityID)
+}
+
+type ReviveEvent struct {
+	EntityID ecs.EntityID
+}
+
+func (e ReviveEvent) String() string {
+	return fmt.Sprintf("{ReviveEvent %d}", e.EntityID)
 }
