@@ -178,14 +178,9 @@ func main() {
 		&movementSystem{},
 		&ultimatesSystem{},
 		&battleSystem{},
+		&dodgeSystem{},
 		&arrowSystem{},
 	}
-
-	go func() {
-		ecsManager.events.Publish("example")
-		ecsManager.events.Schedule("example 5s", time.Now().Add(time.Second*5))
-		ecsManager.events.Schedule("example 3s", time.Now().Add(time.Second*3))
-	}()
 
 	go func() {
 		t := time.Now()
@@ -193,7 +188,7 @@ func main() {
 			dt := float32(time.Since(t).Milliseconds())
 			t = time.Now()
 
-			ecsManager.events.AdvanceScheduled()
+			ecsManager.events.AdvanceScheduled(t)
 
 			for _, s := range systems {
 				if ep, ok := s.(interface {

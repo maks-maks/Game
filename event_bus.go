@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -10,12 +11,14 @@ type EventBus struct {
 }
 
 func (b *EventBus) Publish(e Event) {
+	log = append(log, fmt.Sprintf("Event %s", e))
 	b.queue = append(b.queue, e)
 }
 
-func (b *EventBus) Schedule(e Event, t time.Time) {
+func (b *EventBus) Schedule(e Event, dt int) {
 	// find an index to insert
 	insertIndex := 0
+	t := time.Now().Add(time.Duration(dt) * time.Millisecond)
 	for i, item := range b.scheduled {
 		if item.Time.After(t) {
 			insertIndex = i
@@ -32,10 +35,11 @@ func (b *EventBus) Schedule(e Event, t time.Time) {
 	}
 }
 
-func (b *EventBus) AdvanceScheduled() {
+func (b *EventBus) AdvanceScheduled(t time.Time) {
 	for _, item := range b.scheduled {
-		if item.Time.Before(time.Now()) {
-			b.queue = append(b.queue, b.scheduled[0])
+		if item.Time.Before(t) {
+			log = append(log, fmt.Sprintf("%s", b.scheduled[0].Event))
+			b.queue = append(b.queue, b.scheduled[0].Event)
 			b.scheduled = b.scheduled[1:]
 		} else {
 			break
@@ -57,6 +61,6 @@ func (b *EventBus) ClearQueue() {
 type Event interface{}
 
 type TimedEvent struct {
-	Time  time.Time
 	Event Event
+	Time  time.Time
 }

@@ -140,8 +140,10 @@ type DeadComponent struct {
 type NameComponent struct {
 	Name string
 }
+
 type ArrowComponent struct {
-	Damage int32
+	Damage    int32
+	DamagerID ecs.EntityID
 }
 
 var (
@@ -384,13 +386,6 @@ func (s *chasingSystem) Update(dt float32) {
 
 type arrowSystem struct{}
 
-func (s *arrowSystem) ProcessEvents(b EventBus) {
-	b.Iterate(func(e Event) bool {
-		log = append(log, fmt.Sprintf("got event %v", e))
-		return true
-	})
-}
-
 func (s *arrowSystem) Update(dt float32) {
 	query := ecsManager.Query(ecs.BuildTag(targetC, positionC, arrowC))
 	for _, item := range query {
@@ -410,8 +405,6 @@ func (s *arrowSystem) Update(dt float32) {
 
 		d := distance(position, targetPosition)
 
-		d = distance(position, targetPosition)
-
 		if d < 15 {
 			ecsManager.DisposeEntity(item.Entity)
 
@@ -429,12 +422,11 @@ func (s *arrowSystem) Update(dt float32) {
 				continue
 			}
 
-			targetstats.Health -= arrow.Damage
-			if targetstats.Health <= 0 {
-				target.Entity.RemoveComponent(aliveC)
-				target.Entity.AddComponent(deadC, &DeadComponent{})
-				log = append(log, fmt.Sprintf("%d killed %d with arrow", item.Entity.ID, target.Entity.ID))
-			}
+			ecsManager.events.Schedule(&HitEvent{
+				DamagerID: arrow.DamagerID,
+				TargetID:  target.Entity.ID,
+				Damage:    arrow.Damage,
+			}, 0)
 		}
 	}
 
@@ -443,31 +435,11 @@ func (s *arrowSystem) Update(dt float32) {
 type movementSystem struct{}
 
 func (s *movementSystem) Update(dt float32) {
-	// query := ecsManager.Query(ecs.BuildTag(targetC, positionC, statC, aliveC))
 	query := ecsManager.Query(ecs.BuildTag(positionC))
 	for _, item := range query {
 		position := item.Components[positionC].(*PositionComponent)
 		position.X += dt * position.XSpeed
 		position.Y += dt * position.YSpeed
-		// currentTarget := item.Components[targetC].(*TargetComponent)
-		// stats := item.Components[statC].(*StatsComponent)
-
-		// target := ecsManager.GetEntityByID(currentTarget.TargetID, positionC)
-		// if target == nil {
-		// 	currentTarget.TargetID = 0
-		// 	continue
-		// }
-
-		// targetPosition := target.Components[positionC].(*PositionComponent)
-		// x1, y1, x2, y2 := position.X, position.Y, targetPosition.X, targetPosition.Y
-
-		// d := distance(position, targetPosition)
-		// if d < stats.AttackRange {
-		// 	continue
-		// }
-
-		// position.X += (x2 - x1) / d * dt / 30
-		// position.Y += (y2 - y1) / d * dt / 30
 	}
 }
 
@@ -482,6 +454,28 @@ func distanceXY(x1, y1, x2, y2 float32) float32 {
 }
 
 type ultimatesSystem struct{}
+
+func (s *ultimatesSystem) ProcessEvents(b EventBus) {
+	b.Iterate(func(e Event) bool {
+		switch event := e.(type) {
+		case *UltaChargeEvent:
+			entity := ecsManager.GetEntityByID(event.EntityID, ultaC, aliveC)
+
+			ulta, ok := entity.Components[ultaC].(*UltimateComponent)
+			if !ok {
+				return true
+			}
+			if event.EventType == "damage" {
+				ulta.Charge += ulta.HitInc
+			} else if event.EventType == "dodge" {
+				ulta.Charge += ulta.DodgeInc
+			} else if event.EventType == "heal" {
+				ulta.Charge += ulta.HealInc
+			}
+		}
+		return true
+	})
+}
 
 func (s *ultimatesSystem) Update(dt float32) {
 	query := ecsManager.Query(ecs.BuildTag(ultaC, aliveC))
@@ -506,7 +500,8 @@ func (s *ultimatesSystem) Update(dt float32) {
 		}
 	}
 }
-func createArrow(targetID ecs.EntityID, x float32, y float32, damage int32, x2 float32, y2 float32) *ecs.Entity {
+
+func createArrow(damagerID, targetID ecs.EntityID, x float32, y float32, damage int32, x2 float32, y2 float32) *ecs.Entity {
 	d := distanceXY(x, y, x2, y2)
 
 	e := ecsManager.NewEntity()
@@ -518,14 +513,84 @@ func createArrow(targetID ecs.EntityID, x float32, y float32, damage int32, x2 f
 		YSpeed: (y2 - y) / d,
 	})
 	ecsManager.AddComponent(e, &ArrowComponent{
-		Damage: damage,
+		Damage:    damage,
+		DamagerID: damagerID,
 	})
 
 	ecsManager.AddComponent(e, &TargetComponent{TargetID: targetID})
 	return e
 }
 
+type dodgeSystem struct{}
+
+func (s *dodgeSystem) ProcessEvents(b EventBus) {
+	b.Iterate(func(e Event) bool {
+		switch event := e.(type) {
+		case *DodgeEvent:
+			entity := ecsManager.GetEntityByID(event.EntityID, statC, positionC, aliveC)
+			position := entity.Components[positionC].(*PositionComponent)
+			stats := entity.Components[statC].(*StatsComponent)
+
+			position.X += event.Direction[0] * stats.DodgeRange
+			position.Y += event.Direction[1] * stats.DodgeRange
+
+			ecsManager.events.Schedule(&UltaChargeEvent{
+				EntityID:  event.DamagerID,
+				EventType: "dodge",
+			}, 100)
+		}
+		return true
+	})
+}
+
+func (s *dodgeSystem) Update(dt float32) {}
+
 type battleSystem struct{}
+
+func (s *battleSystem) ProcessEvents(b EventBus) {
+	b.Iterate(func(e Event) bool {
+		switch event := e.(type) {
+		case *HitEvent:
+			target := ecsManager.GetEntityByID(event.TargetID, statC, positionC, aliveC, stateC)
+			if target == nil {
+				return true
+			}
+			targetStats := target.Components[statC].(*StatsComponent)
+
+			if rand.Int31n(100)+1 <= targetStats.Dodge {
+				targetPosition := target.Components[positionC].(*PositionComponent)
+				x1, y1, x2, y2 := event.DamagerPosition[0], event.DamagerPosition[1], targetPosition.X, targetPosition.Y
+				d := distanceXY(x1, y1, x2, y2)
+				var dir [2]float32
+				// TODO tank, ranger, arrow different dodge direction
+				dir[0] += (x2 - x1) / d
+				dir[1] += (y2 - y1) / d
+				ecsManager.events.Schedule(&DodgeEvent{
+					DamagerID: event.DamagerID,
+					EntityID:  target.Entity.ID,
+					Direction: dir,
+				}, 100)
+
+				return true
+			}
+
+			targetStats.Health = targetStats.Health - int32((float32(event.Damage) / targetStats.Resist))
+			ecsManager.events.Schedule(&UltaChargeEvent{
+				EntityID:  event.DamagerID,
+				EventType: "damage",
+			}, 0)
+			if targetStats.Health <= 0 {
+				target.Entity.RemoveComponent(aliveC)
+				target.Entity.AddComponent(deadC, &DeadComponent{})
+				log = append(log, fmt.Sprintf("%d killed by %d", target.Entity.ID, event.Damage))
+			}
+
+			targetState := target.Components[stateC].(*StateComponent)
+			targetState.State = "idle"
+		}
+		return true
+	})
+}
 
 func (s *battleSystem) Update(dt float32) {
 	query := ecsManager.Query(ecs.BuildTag(targetC, statC, positionC, ultaC, aliveC, stateC))
@@ -559,7 +624,6 @@ func (s *battleSystem) Update(dt float32) {
 		}
 
 		targetPosition := target.Components[positionC].(*PositionComponent)
-		x1, y1, x2, y2 := position.X, position.Y, targetPosition.X, targetPosition.Y
 		d := distance(position, targetPosition)
 		if d > stats.AttackRange {
 			continue
@@ -569,8 +633,10 @@ func (s *battleSystem) Update(dt float32) {
 		stats.Reload = 0
 		if stats.Heal > 0 {
 			targetStats.Health = targetStats.Health + stats.Heal
-			ulta := item.Components[ultaC].(*UltimateComponent)
-			ulta.Charge = ulta.Charge + ulta.HealInc
+			ecsManager.events.Schedule(&UltaChargeEvent{
+				EntityID:  item.Entity.ID,
+				EventType: "heal",
+			}, 0)
 			if targetStats.Health > targetStats.MaxHealth {
 				targetStats.Health = targetStats.MaxHealth
 
@@ -580,25 +646,46 @@ func (s *battleSystem) Update(dt float32) {
 		}
 
 		if stats.AttackRange > 75 {
-			createArrow(target.Entity.ID, position.X, position.Y, stats.Damage, x2, y2)
-			continue
-		}
-		if rand.Int31n(100)+1 <= targetStats.Dodge {
-			targetPosition.X += (x2 - x1) / d * 1 * targetStats.DodgeRange
-			targetPosition.Y += (y2 - y1) / d * 1 * targetStats.DodgeRange
-			targetUlta := target.Components[ultaC].(*UltimateComponent)
-			targetUlta.Charge += targetUlta.DodgeInc
+			createArrow(item.Entity.ID, target.Entity.ID, position.X, position.Y, stats.Damage, targetPosition.X, targetPosition.Y)
 			continue
 		}
 
 		state.State = "attack"
-		targetStats.Health = targetStats.Health - int32((float32(stats.Damage) / targetStats.Resist))
-		ulta := item.Components[ultaC].(*UltimateComponent)
-		ulta.Charge = ulta.Charge + ulta.HitInc
-		if targetStats.Health <= 0 {
-			target.Entity.RemoveComponent(aliveC)
-			target.Entity.AddComponent(deadC, &DeadComponent{})
-			log = append(log, fmt.Sprintf("%d killed %d", item.Entity.ID, target.Entity.ID))
-		}
+		ecsManager.events.Schedule(&HitEvent{
+			DamagerID:       item.Entity.ID,
+			TargetID:        target.Entity.ID,
+			Damage:          stats.Damage,
+			DamagerPosition: [2]float32{position.X, position.Y},
+		}, 100)
 	}
+}
+
+type HitEvent struct {
+	DamagerID       ecs.EntityID
+	TargetID        ecs.EntityID
+	Damage          int32
+	DamagerPosition [2]float32
+}
+
+func (e HitEvent) String() string {
+	return fmt.Sprintf("{HitEvent %d from %d to %d pos=%v}", e.Damage, e.DamagerID, e.TargetID, e.DamagerPosition)
+}
+
+type DodgeEvent struct {
+	DamagerID ecs.EntityID
+	EntityID  ecs.EntityID
+	Direction [2]float32
+}
+
+func (e DodgeEvent) String() string {
+	return fmt.Sprintf("{DodgeEvent %d from %d dir=%v}", e.EntityID, e.DamagerID, e.Direction)
+}
+
+type UltaChargeEvent struct {
+	EntityID  ecs.EntityID
+	EventType string // damage, dodge, heal
+}
+
+func (e UltaChargeEvent) String() string {
+	return fmt.Sprintf("{UltaChargeEvent %d %s}", e.EntityID, e.EventType)
 }
