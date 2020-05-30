@@ -521,12 +521,17 @@ func createArrow(targetID ecs.EntityID, x float32, y float32, damage int32, x2 f
 type battleSystem struct{}
 
 func (s *battleSystem) Update(dt float32) {
-	query := ecsManager.Query(ecs.BuildTag(targetC, statC, positionC, ultaC, aliveC))
+	query := ecsManager.Query(ecs.BuildTag(targetC, statC, positionC, ultaC, aliveC, stateC))
 
 	for _, item := range query {
 		currentTarget := item.Components[targetC].(*TargetComponent)
 		stats := item.Components[statC].(*StatsComponent)
 		position := item.Components[positionC].(*PositionComponent)
+		state := item.Components[stateC].(*StateComponent)
+
+		if state.State == "attack" {
+			continue
+		}
 
 		target := ecsManager.GetEntityByID(currentTarget.TargetID, statC, positionC, ultaC, aliveC)
 		if target == nil {
@@ -579,6 +584,7 @@ func (s *battleSystem) Update(dt float32) {
 			continue
 		}
 
+		state.State = "attack"
 		targetStats.Health = targetStats.Health - int32((float32(stats.Damage) / targetStats.Resist))
 		ulta := item.Components[ultaC].(*UltimateComponent)
 		ulta.Charge = ulta.Charge + ulta.HitInc
