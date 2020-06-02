@@ -223,6 +223,7 @@ func main() {
 		&dodgeSystem{},
 		&arrowSystem{},
 		&aliveSystem{},
+		&AnimationSystem{},
 		renderSystem,
 	}
 
@@ -254,7 +255,7 @@ func main() {
 	}()
 
 	// Set background color to gray
-	a.Gls().ClearColor(0.0, 0.0, 0.0, 1.0)
+	a.Gls().ClearColor(0.5, 0.5, 1.0, 1.0)
 
 	glfwWindow := a.IWindow.(*window.GlfwWindow).Window
 	pod := imguipod.New(glfwWindow)
