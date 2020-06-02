@@ -15,7 +15,7 @@ import (
 	"github.com/g3n/engine/renderer"
 	"github.com/g3n/engine/util/helper"
 	"github.com/g3n/engine/window"
-	imguipod "github.com/maks-maks/Game/imguipod"
+	"github.com/maks-maks/Game/imguipod"
 )
 
 var log []string
@@ -191,10 +191,13 @@ func main() {
 	// scene.Add(btn)
 
 	// Create and add lights to the scene
-	scene.Add(light.NewAmbient(&math32.Color{1.0, 1.0, 1.0}, 0.8))
-	pointLight := light.NewPoint(&math32.Color{1, 1, 1}, 50.0)
-	pointLight.SetPosition(1, 0, 10)
-	scene.Add(pointLight)
+	scene.Add(light.NewAmbient(&math32.Color{1.0, 1.0, 1.0}, 0.0))
+	pointLight1 := light.NewPoint(&math32.Color{1, 1, 1}, 10000.0)
+	pointLight1.SetPosition(1, 20, 50)
+	scene.Add(pointLight1)
+	pointLight2 := light.NewPoint(&math32.Color{1, 1, 1}, 10000.0)
+	pointLight2.SetPosition(1, -20, -50)
+	scene.Add(pointLight2)
 
 	// Create and add an axis helper to the scene
 	scene.Add(helper.NewAxes(0.5))
@@ -207,7 +210,8 @@ func main() {
 		Camera: cam,
 		StaticNodes: []core.INode{
 			cam,
-			pointLight,
+			pointLight1,
+			pointLight2,
 		},
 	}
 	systems := []System{
@@ -250,7 +254,7 @@ func main() {
 	}()
 
 	// Set background color to gray
-	a.Gls().ClearColor(0.5, 0.5, 0.5, 1.0)
+	a.Gls().ClearColor(0.0, 0.0, 0.0, 1.0)
 
 	glfwWindow := a.IWindow.(*window.GlfwWindow).Window
 	pod := imguipod.New(glfwWindow)

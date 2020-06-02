@@ -206,7 +206,7 @@ func createHealer(n string, squad string, x float32, y float32) *ecs.Entity {
 	})
 	geom := geometry.NewSphere(1, 24, 24)
 	mat := material.NewPhysical()
-	mat.SetBaseColorFactor(math32.NewColor4("Yellow", 1))
+	mat.SetBaseColorFactor(math32.NewColor4("White", 1))
 	mesh := graphic.NewMesh(geom, mat)
 	mesh.SetRotation(-math32.Pi/2, 0, 0)
 	ecsManager.AddComponent(e, &RenderableComponent{
@@ -245,9 +245,9 @@ func createRanger(n string, squad string, x float32, y float32) *ecs.Entity {
 	ecsManager.AddComponent(e, &StateComponent{
 		State: "idle",
 	})
-	geom := geometry.NewSphere(1, 24, 24)
+	geom := geometry.NewCylinder(1, 2, 24, 2, true, true)
 	mat := material.NewPhysical()
-	mat.SetBaseColorFactor(math32.NewColor4("Yellow", 1))
+	mat.SetBaseColorFactor(math32.NewColor4("Blue", 1))
 	mesh := graphic.NewMesh(geom, mat)
 	mesh.SetRotation(-math32.Pi/2, 0, 0)
 	ecsManager.AddComponent(e, &RenderableComponent{
@@ -293,9 +293,10 @@ func createTank(n string, squad string, x float32, y float32) *ecs.Entity {
 	ecsManager.AddComponent(e, &StateComponent{
 		State: "idle",
 	})
-	geom := geometry.NewSphere(1, 24, 24)
+
+	geom := geometry.NewCube(2)
 	mat := material.NewPhysical()
-	mat.SetBaseColorFactor(math32.NewColor4("Yellow", 1))
+	mat.SetBaseColorFactor(math32.NewColor4("Green", 1))
 	mesh := graphic.NewMesh(geom, mat)
 	mesh.SetRotation(-math32.Pi/2, 0, 0)
 	ecsManager.AddComponent(e, &RenderableComponent{
