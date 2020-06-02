@@ -6,6 +6,10 @@ import (
 	"math/rand"
 
 	"github.com/bytearena/ecs"
+	"github.com/g3n/engine/geometry"
+	"github.com/g3n/engine/graphic"
+	"github.com/g3n/engine/material"
+	"github.com/g3n/engine/math32"
 )
 
 type Ability interface {
@@ -136,16 +140,17 @@ type ArrowComponent struct {
 }
 
 var (
-	nameC     *ecs.Component
-	positionC *ecs.Component
-	statC     *ecs.Component
-	targetC   *ecs.Component
-	squadC    *ecs.Component
-	ultaC     *ecs.Component
-	aliveC    *ecs.Component
-	deadC     *ecs.Component
-	arrowC    *ecs.Component
-	stateC    *ecs.Component
+	nameC       *ecs.Component
+	positionC   *ecs.Component
+	statC       *ecs.Component
+	targetC     *ecs.Component
+	squadC      *ecs.Component
+	ultaC       *ecs.Component
+	aliveC      *ecs.Component
+	deadC       *ecs.Component
+	arrowC      *ecs.Component
+	stateC      *ecs.Component
+	renderableC *ecs.Component
 )
 
 func setupECS() {
@@ -161,11 +166,12 @@ func setupECS() {
 	deadC = ecsManager.RegisterComponent("dead", &DeadComponent{})
 	arrowC = ecsManager.RegisterComponent("arrow", &ArrowComponent{})
 	stateC = ecsManager.RegisterComponent("state", &StateComponent{})
+	renderableC = ecsManager.RegisterComponent("renderable", &RenderableComponent{})
 	//createTank("Frederik", "a", 100, 100)
 	//createRanger("Legolas", "b", 400, 400)
 	// for i := 1; i < 5; i++ {
-	createSquad("Geroi", 500, 500)
-	createSquad("Sandali", 100, 100)
+	createSquad("Geroi", 200, 200)
+	createSquad("Sandali", -200, -200)
 	//createSquad("Angels", 400, 100)
 	//createSquad("Daemons", 100, 400)
 	// createTank("Frederik", "Sandali", 100, 100)
@@ -197,6 +203,14 @@ func createHealer(n string, squad string, x float32, y float32) *ecs.Entity {
 	})
 	ecsManager.AddComponent(e, &StateComponent{
 		State: "idle",
+	})
+	geom := geometry.NewSphere(1, 24, 24)
+	mat := material.NewPhysical()
+	mat.SetBaseColorFactor(math32.NewColor4("Yellow", 1))
+	mesh := graphic.NewMesh(geom, mat)
+	mesh.SetRotation(-math32.Pi/2, 0, 0)
+	ecsManager.AddComponent(e, &RenderableComponent{
+		Node: mesh,
 	})
 	ecsManager.AddComponent(e, &AliveComponent{})
 	ecsManager.AddComponent(e, &UltimateComponent{
@@ -230,6 +244,14 @@ func createRanger(n string, squad string, x float32, y float32) *ecs.Entity {
 	ecsManager.AddComponent(e, &NameComponent{Name: n})
 	ecsManager.AddComponent(e, &StateComponent{
 		State: "idle",
+	})
+	geom := geometry.NewSphere(1, 24, 24)
+	mat := material.NewPhysical()
+	mat.SetBaseColorFactor(math32.NewColor4("Yellow", 1))
+	mesh := graphic.NewMesh(geom, mat)
+	mesh.SetRotation(-math32.Pi/2, 0, 0)
+	ecsManager.AddComponent(e, &RenderableComponent{
+		Node: mesh,
 	})
 	ecsManager.AddComponent(e, &PositionComponent{
 		X: x + rand.Float32()*200 - 100,
@@ -271,7 +293,14 @@ func createTank(n string, squad string, x float32, y float32) *ecs.Entity {
 	ecsManager.AddComponent(e, &StateComponent{
 		State: "idle",
 	})
-
+	geom := geometry.NewSphere(1, 24, 24)
+	mat := material.NewPhysical()
+	mat.SetBaseColorFactor(math32.NewColor4("Yellow", 1))
+	mesh := graphic.NewMesh(geom, mat)
+	mesh.SetRotation(-math32.Pi/2, 0, 0)
+	ecsManager.AddComponent(e, &RenderableComponent{
+		Node: mesh,
+	})
 	ecsManager.AddComponent(e, &PositionComponent{
 		X: x + rand.Float32()*200 - 100,
 		Y: y + rand.Float32()*200 - 100,
@@ -518,6 +547,15 @@ func createArrow(damagerID, targetID ecs.EntityID, x float32, y float32, damage 
 	})
 
 	ecsManager.AddComponent(e, &TargetComponent{TargetID: targetID})
+
+	geom := geometry.NewSphere(0.5, 24, 24)
+	mat := material.NewPhysical()
+	mat.SetBaseColorFactor(math32.NewColor4("Red", 1))
+	mesh := graphic.NewMesh(geom, mat)
+	ecsManager.AddComponent(e, &RenderableComponent{
+		Node: mesh,
+	})
+
 	return e
 }
 

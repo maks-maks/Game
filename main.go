@@ -2,16 +2,23 @@ package main
 
 import (
 	"fmt"
-	"image"
-	"image/color"
 	"math/rand"
 	"time"
 
-	"github.com/AllenDang/giu"
-	g "github.com/AllenDang/giu"
-	"github.com/AllenDang/giu/imgui"
-	"github.com/bytearena/ecs"
+	"github.com/g3n/engine/app"
+	"github.com/g3n/engine/camera"
+	"github.com/g3n/engine/core"
+	"github.com/g3n/engine/gls"
+	"github.com/g3n/engine/gui"
+	"github.com/g3n/engine/light"
+	"github.com/g3n/engine/math32"
+	"github.com/g3n/engine/renderer"
+	"github.com/g3n/engine/util/helper"
+	"github.com/g3n/engine/window"
+	imguipod "github.com/maks-maks/Game/imguipod"
 )
+
+var log []string
 
 type PositionComponent struct {
 	X      float32
@@ -29,149 +36,180 @@ func renderSystem() {
 	}
 }
 
-func gameCanvas() *g.Layout {
-	return &g.Layout{
-		// g.Label("Canvas demo"),
-		g.Custom(func() {
-			q := ecsManager.Query(ecs.BuildTag(positionC, statC, stateC))
+// func gameCanvas() *g.Layout {
+// 	return &g.Layout{
+// 		// g.Label("Canvas demo"),
+// 		g.Custom(func() {
+// 			q := ecsManager.Query(ecs.BuildTag(positionC, statC, stateC))
 
-			for _, item := range q {
-				data := item.Components[positionC].(*PositionComponent)
-				stats := item.Components[statC].(*StatsComponent)
+// 			for _, item := range q {
+// 				data := item.Components[positionC].(*PositionComponent)
+// 				stats := item.Components[statC].(*StatsComponent)
 
-				canvas := g.GetCanvas()
-				pos := g.GetCursorScreenPos()
-				p0 := pos.Add(image.Pt(int(data.X), int(data.Y)))
+// 				canvas := g.GetCanvas()
+// 				pos := g.GetCursorScreenPos()
+// 				p0 := pos.Add(image.Pt(int(data.X), int(data.Y)))
 
-				opacity := uint8(255)
-				if stats.Health <= 0 {
-					opacity = 25
-				}
+// 				opacity := uint8(255)
+// 				if stats.Health <= 0 {
+// 					opacity = 25
+// 				}
 
-				var circleColor color.RGBA
-				if stats.Heal > 0 {
-					circleColor = color.RGBA{75, 120, 210, opacity}
-				} else if stats.AttackRange > 100 {
-					circleColor = color.RGBA{200, 0, 100, opacity}
-				} else {
-					circleColor = color.RGBA{255, 255, 255, opacity}
-				}
-				r := 25
-				canvas.AddCircleFilled(p0, float32(r), circleColor)
-				if curEntityID == item.Entity.ID {
-					canvas.AddCircle(p0, float32(r+3), color.RGBA{50, 255, 50, 255}, 3)
-				}
-				// Healthbar
-				if stats.Health > 0 {
-					width := r * 2 * int(stats.Health) / int(stats.MaxHealth)
+// 				var circleColor color.RGBA
+// 				if stats.Heal > 0 {
+// 					circleColor = color.RGBA{75, 120, 210, opacity}
+// 				} else if stats.AttackRange > 100 {
+// 					circleColor = color.RGBA{200, 0, 100, opacity}
+// 				} else {
+// 					circleColor = color.RGBA{255, 255, 255, opacity}
+// 				}
+// 				r := 25
+// 				canvas.AddCircleFilled(p0, float32(r), circleColor)
+// 				if curEntityID == item.Entity.ID {
+// 					canvas.AddCircle(p0, float32(r+3), color.RGBA{50, 255, 50, 255}, 3)
+// 				}
+// 				// Healthbar
+// 				if stats.Health > 0 {
+// 					width := r * 2 * int(stats.Health) / int(stats.MaxHealth)
 
-					pMin := p0.Add(image.Pt(-r, -r-5))
-					pMax := pMin.Add(image.Pt(int(width), 10))
-					hbColor := color.RGBA{200, 0, 0, opacity}
-					canvas.AddRectFilled(pMin, pMax, hbColor, 0, giu.CornerFlags_All)
+// 					pMin := p0.Add(image.Pt(-r, -r-5))
+// 					pMax := pMin.Add(image.Pt(int(width), 10))
+// 					hbColor := color.RGBA{200, 0, 0, opacity}
+// 					canvas.AddRectFilled(pMin, pMax, hbColor, 0, giu.CornerFlags_All)
 
-					textPos := pMin.Add(image.Pt(0, -2))
-					textColor := color.RGBA{0, 0, 0, opacity}
-					canvas.AddText(textPos, textColor, fmt.Sprintf("%d", stats.Health))
-				}
+// 					textPos := pMin.Add(image.Pt(0, -2))
+// 					textColor := color.RGBA{0, 0, 0, opacity}
+// 					canvas.AddText(textPos, textColor, fmt.Sprintf("%d", stats.Health))
+// 				}
 
-				if true {
-					state := item.Components[stateC].(*StateComponent)
-					statePos := p0.Add(image.Pt(-r, +r+5))
-					canvas.AddText(statePos, color.RGBA{0, 0, 0, 255}, fmt.Sprintf("%v", state.State))
-				}
-			}
+// 				if true {
+// 					state := item.Components[stateC].(*StateComponent)
+// 					statePos := p0.Add(image.Pt(-r, +r+5))
+// 					canvas.AddText(statePos, color.RGBA{0, 0, 0, 255}, fmt.Sprintf("%v", state.State))
+// 				}
+// 			}
 
-			q = ecsManager.Query(ecs.BuildTag(positionC, arrowC))
+// 			q = ecsManager.Query(ecs.BuildTag(positionC, arrowC))
 
-			for _, item := range q {
-				data := item.Components[positionC].(*PositionComponent)
+// 			for _, item := range q {
+// 				data := item.Components[positionC].(*PositionComponent)
 
-				canvas := g.GetCanvas()
-				pos := g.GetCursorScreenPos()
-				p0 := pos.Add(image.Pt(int(data.X), int(data.Y)))
+// 				canvas := g.GetCanvas()
+// 				pos := g.GetCursorScreenPos()
+// 				p0 := pos.Add(image.Pt(int(data.X), int(data.Y)))
 
-				opacity := uint8(255)
+// 				opacity := uint8(255)
 
-				var circleColor color.RGBA
-				circleColor = color.RGBA{255, 255, 255, opacity}
-				// r := 5
-				n := float32(20)
-				vd := distanceXY(0, 0, data.XSpeed, data.YSpeed)
-				vx := data.XSpeed / vd
-				vy := data.YSpeed / vd
-				data.Debug = fmt.Sprintf("v(%v %v) d:%v  vx:%v vy:%v", data.XSpeed, data.YSpeed, vd, vx, vy)
-				pb := p0.Add(image.Pt(int(-vx*n), int(-vy*n)))
+// 				var circleColor color.RGBA
+// 				circleColor = color.RGBA{255, 255, 255, opacity}
+// 				// r := 5
+// 				n := float32(20)
+// 				vd := distanceXY(0, 0, data.XSpeed, data.YSpeed)
+// 				vx := data.XSpeed / vd
+// 				vy := data.YSpeed / vd
+// 				data.Debug = fmt.Sprintf("v(%v %v) d:%v  vx:%v vy:%v", data.XSpeed, data.YSpeed, vd, vx, vy)
+// 				pb := p0.Add(image.Pt(int(-vx*n), int(-vy*n)))
 
-				p1 := pb.Add(image.Pt(int(-vy*n/2), int(vx*n/2)))
-				p2 := pb.Add(image.Pt(int(vy*n/2), int(-vx*n/2)))
-				p3 := p0.Add(image.Pt(int(-vx*n*2), int(-vy*n*2)))
+// 				p1 := pb.Add(image.Pt(int(-vy*n/2), int(vx*n/2)))
+// 				p2 := pb.Add(image.Pt(int(vy*n/2), int(-vx*n/2)))
+// 				p3 := p0.Add(image.Pt(int(-vx*n*2), int(-vy*n*2)))
 
-				canvas.AddTriangleFilled(p0, p1, p2, circleColor)
-				canvas.AddLine(p0, p3, circleColor, 5)
-			}
+// 				canvas.AddTriangleFilled(p0, p1, p2, circleColor)
+// 				canvas.AddLine(p0, p3, circleColor, 5)
+// 			}
 
-			if showSpeed {
-				q = ecsManager.Query(ecs.BuildTag(positionC))
+// 			if showSpeed {
+// 				q = ecsManager.Query(ecs.BuildTag(positionC))
 
-				for _, item := range q {
-					data := item.Components[positionC].(*PositionComponent)
+// 				for _, item := range q {
+// 					data := item.Components[positionC].(*PositionComponent)
 
-					canvas := g.GetCanvas()
-					pos := g.GetCursorScreenPos()
-					p0 := pos.Add(image.Pt(int(data.X), int(data.Y)))
+// 					canvas := g.GetCanvas()
+// 					pos := g.GetCursorScreenPos()
+// 					p0 := pos.Add(image.Pt(int(data.X), int(data.Y)))
 
-					color := color.RGBA{255, 100, 100, 255}
-					// canvas.AddCircleFilled(p0, float32(r), circleColor)
-					canvas.AddLine(p0, p0.Add(image.Pt(int(data.XSpeed*300), int(data.YSpeed*300))), color, 2)
-				}
-			}
-		}),
-	}
-}
+// 					color := color.RGBA{255, 100, 100, 255}
+// 					// canvas.AddCircleFilled(p0, float32(r), circleColor)
+// 					canvas.AddLine(p0, p0.Add(image.Pt(int(data.XSpeed*300), int(data.YSpeed*300))), color, 2)
+// 				}
+// 			}
+// 		}),
+// 	}
+// }
 
 var speedMultiplier float32 = 1
 var paused float32 = 0
 var showSpeed bool = false
 
-func loop() {
-	size := g.Context.GetPlatform().DisplaySize()
-	var playPauseButton g.Widget
-	if paused != 0 {
-		playPauseButton = g.Button(" pause ", func() { paused = 0 })
-	} else {
-		playPauseButton = g.Button(" play  ", func() { paused = 1 })
-	}
-	g.SingleWindow("main window", g.Layout{
-		// g.Button("Show demo window", func() { demo = true }),
-		g.Line(
-			g.Checkbox("Show demo window", &demo, func() {}),
-			// g.SliderInt("Delay", &delayMs, 10, 500, "%d ms"),
-			playPauseButton,
-			g.RadioButton("0.2x", speedMultiplier == 0.2, func() { speedMultiplier = 0.2 }),
-			g.RadioButton("1x", speedMultiplier == 1, func() { speedMultiplier = 1 }),
-			g.RadioButton("10x", speedMultiplier == 10, func() { speedMultiplier = 10 }),
-			g.Checkbox("Show speed", &showSpeed, nil),
-		),
-		g.SplitLayout("Split", g.DirectionHorizontal, false, 300,
-			leftPanel(),
-			g.SplitLayout("Split2", g.DirectionHorizontal, false, size[0]-600,
-				gameCanvas(),
-				rightPanel(),
-			),
-		),
-	})
-	if demo {
-		imgui.ShowDemoWindow(&demo)
-	}
-}
-
 func main() {
+	// Create application and scene
+	a := app.App()
+
+	scene := core.NewNode()
+
+	// Set the scene to be managed by the gui manager
+	gui.Manager().Set(scene)
+
+	// Create perspective camera
+	cam := camera.New(1)
+	cam.SetPosition(0, 100, 0)
+	cam.LookAt(&math32.Vector3{0, 0, 0}, &math32.Vector3{0, 0, -1})
+	scene.Add(cam)
+
+	// Set up orbit control for the camera
+	camera.NewOrbitControl(cam)
+
+	// Set up callback to update viewport and camera aspect ratio when the window is resized
+	onResize := func(evname string, ev interface{}) {
+		// Get framebuffer size and update viewport accordingly
+		width, height := a.GetSize()
+		a.Gls().Viewport(0, 0, int32(width), int32(height))
+		// Update the camera's aspect ratio
+		cam.SetAspect(float32(width) / float32(height))
+	}
+	a.Subscribe(window.OnWindowSize, onResize)
+	onResize("", nil)
+
+	// // Create a blue torus and add it to the scene
+	// geom := geometry.NewTorus(1, .4, 24, 64, math32.Pi*2)
+	// // mat := material.NewStandard(math32.NewColor("DarkBlue"))
+	// mat := material.NewPhysical()
+	// mat.SetBaseColorFactor(math32.NewColor4("Blue", 1))
+	// mesh := graphic.NewMesh(geom, mat)
+	// mat.SetMetallicFactor(0.9)
+	// mat.SetRoughnessFactor(0.2)
+	// mesh.Node.SetPosition(1, 0, 0)
+	// scene.Add(mesh)
+
+	// // Create and add a button to the scene
+	// btn := gui.NewButton("Make Red")
+	// btn.SetPosition(100, 40)
+	// btn.SetSize(40, 40)
+	// btn.Subscribe(gui.OnClick, func(name string, ev interface{}) {
+	// 	mat.SetBaseColorFactor(math32.NewColor4("DarkRed", 1))
+	// })
+	// scene.Add(btn)
+
+	// Create and add lights to the scene
+	scene.Add(light.NewAmbient(&math32.Color{1.0, 1.0, 1.0}, 0.8))
+	pointLight := light.NewPoint(&math32.Color{1, 1, 1}, 50.0)
+	pointLight.SetPosition(1, 0, 10)
+	scene.Add(pointLight)
+
+	// Create and add an axis helper to the scene
+	scene.Add(helper.NewAxes(0.5))
+
 	rand.Seed(int64(time.Now().Nanosecond()))
 
 	setupECS()
-	wnd := g.NewMasterWindow("App", 1000, 500, 0, nil)
-
+	renderSystem := &renderableSystem{
+		Scene:  scene,
+		Camera: cam,
+		StaticNodes: []core.INode{
+			cam,
+			pointLight,
+		},
+	}
 	systems := []System{
 		&targetingSystem{},
 		&chasingSystem{},
@@ -181,6 +219,7 @@ func main() {
 		&dodgeSystem{},
 		&arrowSystem{},
 		&aliveSystem{},
+		renderSystem,
 	}
 
 	go func() {
@@ -206,10 +245,26 @@ func main() {
 			ecsManager.events.ClearQueue()
 
 			time.Sleep(time.Duration(delayMs) * time.Millisecond)
-			g.Update()
+			// g.Update()
 		}
 	}()
 
-	wnd.Main(loop)
-	// renderSystem()
+	// Set background color to gray
+	a.Gls().ClearColor(0.5, 0.5, 0.5, 1.0)
+
+	glfwWindow := a.IWindow.(*window.GlfwWindow).Window
+	pod := imguipod.New(glfwWindow)
+
+	gui := NewGUI(pod)
+
+	// Run the application
+	a.Run(func(renderer *renderer.Renderer, deltaTime time.Duration) {
+		a.Gls().Clear(gls.DEPTH_BUFFER_BIT | gls.STENCIL_BUFFER_BIT | gls.COLOR_BUFFER_BIT)
+		renderSystem.PopulateScene()
+		renderer.Render(scene, cam)
+
+		pod.BeginImgui()
+		gui.Render()
+		pod.EndImgui()
+	})
 }

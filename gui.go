@@ -5,85 +5,216 @@ import (
 	"reflect"
 	"strings"
 
-	g "github.com/AllenDang/giu"
 	"github.com/bytearena/ecs"
+	"github.com/inkyblackness/imgui-go/v2"
+	"github.com/maks-maks/Game/imguipod"
 )
 
-var demo = false
-var curEntityID ecs.EntityID = 0
-var delayMs int32 = 30
-var log []string
+type Widget interface {
+	Build()
+}
 
-func leftPanel() g.Widget {
-	var tag ecs.Tag = 0
+type BaseWidget struct {
+	pod *imguipod.ImguiPod
+}
 
-	q := ecsManager.Query(tag)
-	items := make([]string, 0, len(q))
+type GUI struct {
+	pod     *imguipod.ImguiPod
+	widgets []Widget
+}
 
-	for _, v := range q {
-		nameQ, hasName := v.Entity.GetComponentData(nameC)
-		squadQ, hasSquad := v.Entity.GetComponentData(squadC)
-		if hasName && hasSquad {
-			name := nameQ.(*NameComponent)
-			squad := squadQ.(*SquadComponent)
-			items = append(items, fmt.Sprintf("%d - %s - %s", v.Entity.ID, name.Name, squad.Squad))
-		} else if hasName {
-			name := nameQ.(*NameComponent)
-			items = append(items, fmt.Sprintf("%d - %s", v.Entity.ID, name.Name))
-		} else {
-			items = append(items, fmt.Sprintf("%d", v.Entity.ID))
+func NewGUI(pod *imguipod.ImguiPod) *GUI {
+	bw := BaseWidget{pod}
+	return &GUI{
+		pod: pod,
+		widgets: []Widget{
+			&topToolBar{bw},
+			&sceneInspectorWidget{bw},
+			&componentInspector{bw},
+		},
+	}
+}
+
+func (g *GUI) Render() {
+	for _, w := range g.widgets {
+		w.Build()
+	}
+}
+
+type sceneInspectorWidget struct {
+	BaseWidget
+}
+
+func (w sceneInspectorWidget) Build() {
+	ss := w.pod.Platform.DisplaySize()
+	wh := imgui.CalcTextSize("T", false, 1000)
+	top := wh.Y + imgui.CurrentStyle().FramePadding().Y*2
+	imgui.SetNextWindowPos(imgui.Vec2{X: 0, Y: top})
+	imgui.SetNextWindowSize(imgui.Vec2{X: 200, Y: ss[1] - top})
+
+	imgui.BeginV("SceneInspector", nil, imgui.WindowFlagsNoMove)
+
+	if imgui.BeginTabBar("LeftTabBar") {
+
+		if imgui.BeginTabItem("Entities") {
+			var tag ecs.Tag = 0
+			q := ecsManager.Query(tag)
+			items := make([]string, 0, len(q))
+
+			for _, v := range q {
+				nameQ, hasName := v.Entity.GetComponentData(nameC)
+				squadQ, hasSquad := v.Entity.GetComponentData(squadC)
+				if hasName && hasSquad {
+					name := nameQ.(*NameComponent)
+					squad := squadQ.(*SquadComponent)
+					items = append(items, fmt.Sprintf("%d - %s - %s", v.Entity.ID, name.Name, squad.Squad))
+				} else if hasName {
+					name := nameQ.(*NameComponent)
+					items = append(items, fmt.Sprintf("%d - %s", v.Entity.ID, name.Name))
+				} else {
+					items = append(items, fmt.Sprintf("%d", v.Entity.ID))
+				}
+			}
+			ListBoxF("Entities", len(items), func(i int) {
+				selected := i == curEntityI
+				if imgui.SelectableV(items[i], selected, 0, imgui.Vec2{}) {
+					curEntityI = i
+					curEntityID = q.Entities()[curEntityI].ID
+				}
+			})
+			imgui.EndTabItem()
+		}
+
+		if imgui.BeginTabItem("Log") {
+			ListBoxF("Entities", len(log), func(i int) {
+				imgui.Text(log[i])
+			})
+
+			imgui.EndTabItem()
+		}
+
+		imgui.EndTabBar()
+	}
+
+	imgui.End()
+}
+
+func ListBoxF(id string, length int, f func(i int)) bool {
+	imgui.BeginChildV(id, imgui.Vec2{}, true, 0)
+
+	var clipper imgui.ListClipper
+	clipper.Begin(length)
+
+	for clipper.Step() {
+		for i := clipper.DisplayStart; i < clipper.DisplayEnd; i++ {
+			f(i)
 		}
 	}
 
-	return g.TabBar("LeftTabBar", g.Layout{
-		g.TabItem("Enitites", g.Layout{
-			g.ListBox("Entities", items,
-				func(i int) {
-					curEntityID = q.Entities()[i].ID
-				},
-				func(selectedIndex int) {}),
-		}),
-		g.TabItem("Log", g.Layout{
-			g.ListBox("logs", log, nil, nil),
-		}),
-	})
+	clipper.End()
+
+	imgui.EndChild()
+	return false
 }
 
-func rightPanel() *g.Layout {
-	q := ecsManager.GetEntityByID(curEntityID)
-	if q == nil {
-		return &g.Layout{}
+var curEntityI int
+var curEntityID ecs.EntityID = 0
+var delayMs int32 = 30
+var demo = false
+
+type topToolBar struct {
+	BaseWidget
+}
+
+func (w topToolBar) Build() {
+	ss := w.pod.Platform.DisplaySize()
+	imgui.SetNextWindowPos(imgui.Vec2{X: 0, Y: 0})
+	imgui.SetNextWindowSize(imgui.Vec2{X: ss[0], Y: 0})
+	open := true
+
+	imgui.PushStyleVarFloat(imgui.StyleVarWindowRounding, 0)
+	imgui.BeginV("topbar", &open, imgui.WindowFlagsNoTitleBar|imgui.WindowFlagsNoMove)
+
+	imgui.Checkbox("Show demo window", &demo)
+
+	imgui.SameLineV(0, 10)
+	if paused == 0 {
+		if imgui.Button("play") {
+			paused = 1
+		}
+	} else {
+		if imgui.Button("pause") {
+			paused = 0
+		}
 	}
 
-	l := make(g.Layout, 0)
+	imgui.SameLineV(0, 10)
+	if imgui.RadioButton("0.2x", speedMultiplier == 0.2) {
+		speedMultiplier = 0.2
+	}
+	imgui.SameLine()
+	if imgui.RadioButton("1x", speedMultiplier == 1) {
+		speedMultiplier = 1
+	}
+	imgui.SameLine()
+	if imgui.RadioButton("10x", speedMultiplier == 10) {
+		speedMultiplier = 10
+	}
+
+	imgui.SameLineV(0, 10)
+	imgui.Checkbox("Show speed", &showSpeed)
+
+	imgui.End()
+	imgui.PopStyleVar()
+
+	if demo {
+		imgui.ShowDemoWindow(&demo)
+	}
+}
+
+type componentInspector struct {
+	BaseWidget
+}
+
+func (w componentInspector) Build() {
+	ss := w.pod.Platform.DisplaySize()
+	wh := imgui.CalcTextSize("T", false, 1000)
+	top := wh.Y + imgui.CurrentStyle().FramePadding().Y*2
+	imgui.SetNextWindowPos(imgui.Vec2{X: ss[0] - 200, Y: top})
+	imgui.SetNextWindowSize(imgui.Vec2{X: 200, Y: ss[1] - top})
+
+	imgui.BeginV("ComponentInspector", nil, imgui.WindowFlagsNoMove)
+	defer imgui.End()
+
+	q := ecsManager.GetEntityByID(curEntityID)
+	if q == nil {
+		return
+	}
 
 	for _, component := range ecsManager.components {
 		if q.Entity.HasComponent(component) {
-			n := g.TreeNode(ecsManager.ComponentName(component), g.TreeNodeFlagsDefaultOpen, entityComponentLayout(q.Entity, component))
-			l = append(l, n)
+			if imgui.TreeNodeV(ecsManager.ComponentName(component), imgui.TreeNodeFlagsDefaultOpen) {
+				buildComponentWidget(q.Entity, component)
+				imgui.TreePop()
+			}
 		}
 	}
-
-	return &l
 }
 
-func entityComponentLayout(e *ecs.Entity, c *ecs.Component) g.Layout {
+func buildComponentWidget(e *ecs.Entity, c *ecs.Component) {
 	d, _ := e.GetComponentData(c)
-
 	val := reflect.ValueOf(d)
 	val = reflect.Indirect(val)
 
-	return structLayout(val)
+	buildStructWidget(val)
 }
 
-func structLayout(val reflect.Value) g.Layout {
+func buildStructWidget(val reflect.Value) {
 	if !val.IsValid() {
-		return g.Layout{}
+		return
 	}
 	val = reflect.Indirect(val)
 	typ := val.Type()
-
-	l := make(g.Layout, 0)
 
 	switch typ.Kind() {
 	case reflect.Struct:
@@ -101,39 +232,32 @@ func structLayout(val reflect.Value) g.Layout {
 
 			switch kind {
 			case reflect.String:
-				w := g.InputText(f.Name, 0, vf.Addr().Interface().(*string))
-				l = append(l, w)
+				imgui.InputText(f.Name, vf.Addr().Interface().(*string))
 			case reflect.Float32:
 				format = stringOrDefault(format, "%.3f")
-				w := DragFloatV(f.Name, vf.Addr().Interface().(*float32), 1, 0, 0, format, 1)
-				l = append(l, w)
+				imgui.DragFloatV(f.Name, vf.Addr().Interface().(*float32), 1, 0, 0, format, 1)
 			case reflect.Int32:
 				format = stringOrDefault(format, "%d")
-				w := g.DragIntV(f.Name, vf.Addr().Interface().(*int32), 1.0, 0, 0, format)
-				l = append(l, w)
+				imgui.DragIntV(f.Name, vf.Addr().Interface().(*int32), 1.0, 0, 0, format)
 			case reflect.Uint32:
 				format = stringOrDefault(format, "%d")
-				// imgui.Drag
-				// w := g.DragIntV(f.Name, vf.Addr().Interface().(*int32), 1.0, 0, 0, format)
-				w := LabelText(f.Name, fmt.Sprintf("%d", vf.Interface().(ecs.EntityID)))
-				l = append(l, w)
+				imgui.LabelText(f.Name, fmt.Sprintf("%d", vf.Interface().(ecs.EntityID)))
 			case reflect.Bool:
-				w := g.Checkbox(f.Name, vf.Addr().Interface().(*bool), nil)
-				l = append(l, w)
+				imgui.Checkbox(f.Name, vf.Addr().Interface().(*bool))
 			case reflect.Interface:
 				q := reflect.ValueOf(vf.Interface())
 				name := fmt.Sprintf("%s (%s)", f.Name, q.String())
-				n := g.TreeNode(name, g.TreeNodeFlagsDefaultOpen, structLayout(q))
-				l = append(l, n)
+				if imgui.TreeNodeV(name, imgui.TreeNodeFlagsDefaultOpen) {
+					buildStructWidget(q)
+					imgui.TreePop()
+				}
 			default:
-				w := LabelText(f.Name, fmt.Sprintf("%s isn't not supported", kind.String()))
-				l = append(l, w)
+				imgui.LabelText(f.Name, fmt.Sprintf("%s isn't not supported", kind.String()))
 			}
 		}
 	default:
+		imgui.LabelText("???", fmt.Sprintf("%s isn't not supported", typ.String()))
 	}
-
-	return l
 }
 
 func stringOrDefault(val, def string) string {
