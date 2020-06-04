@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytearena/ecs"
 	"github.com/g3n/engine/geometry"
+	"github.com/g3n/engine/gls"
 	"github.com/g3n/engine/graphic"
 	"github.com/g3n/engine/material"
 	"github.com/g3n/engine/math32"
@@ -298,32 +299,24 @@ func createTank(n string, squad string, x float32, y float32) *ecs.Entity {
 		State: "idle",
 	})
 
-	// Creates texture 1 and animator
 	tex1, err := texture.NewTexture2DFromImage("spr_idle_strip.png")
 	if err != nil {
-		// a.Log().Fatal("Error loading texture: %s", err)
 		panic(err)
 	}
+	tex1.SetMagFilter(gls.NEAREST)
 	anim1 := texture.NewAnimator(tex1, 16, 1)
 	anim1.SetDispTime(16666 * time.Microsecond)
 	ecsManager.AddComponent(e, &AnimationComponent{
 		Object: anim1,
 		Speed:  0.5,
 	})
-	// anim1.SetMaxCycles(4000)
 
 	mat1 := material.NewStandard(&math32.Color{1, 1, 1})
 	mat1.AddTexture(tex1)
 	mat1.SetOpacity(1)
 	mat1.SetTransparent(true)
-	s1 := graphic.NewSprite(10, 10, mat1)
-	s1.SetPosition(-2, 2, 0)
+	s1 := graphic.NewSprite(17, 9.6, mat1)
 
-	// geom := geometry.NewCube(2)
-	// mat := material.NewPhysical()
-	// mat.SetBaseColorFactor(math32.NewColor4("Green", 1))
-	// mesh := graphic.NewMesh(geom, mat)
-	// mesh.SetRotation(-math32.Pi/2, 0, 0)
 	ecsManager.AddComponent(e, &RenderableComponent{
 		Node: s1,
 	})
