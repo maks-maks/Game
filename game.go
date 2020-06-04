@@ -308,7 +308,6 @@ func createTank(n string, squad string, x float32, y float32) *ecs.Entity {
 	anim1.SetDispTime(16666 * time.Microsecond)
 	ecsManager.AddComponent(e, &AnimationComponent{
 		Object: anim1,
-		Speed:  0.5,
 	})
 
 	mat1 := material.NewStandard(&math32.Color{1, 1, 1})

@@ -9,8 +9,10 @@ import (
 	"github.com/g3n/engine/core"
 	"github.com/g3n/engine/gls"
 	"github.com/g3n/engine/light"
+	"github.com/g3n/engine/material"
 	"github.com/g3n/engine/math32"
 	"github.com/g3n/engine/renderer"
+	"github.com/g3n/engine/texture"
 	"github.com/g3n/engine/util/helper"
 	"github.com/g3n/engine/window"
 	"github.com/maks-maks/Game/imguipod"
@@ -173,17 +175,17 @@ func main() {
 	pointLight2.SetPosition(1, -20, -50)
 
 	setupECS()
-	renderSystem := &renderableSystem{
-		Scene:  scene,
-		Camera: cam,
-		StaticNodes: []core.INode{
-			cam,
-			ambLight,
-			pointLight1,
-			pointLight2,
-			helper.NewAxes(1),
-		},
+	renderSystem := newRenderableSystem()
+	renderSystem.Scene = scene
+	renderSystem.Camera = cam
+	renderSystem.StaticNodes = []core.INode{
+		cam,
+		ambLight,
+		pointLight1,
+		pointLight2,
+		helper.NewAxes(1),
 	}
+	animationSystem := newAnimationSystem()
 	systems := []System{
 		&targetingSystem{},
 		&chasingSystem{},
@@ -193,9 +195,11 @@ func main() {
 		&dodgeSystem{},
 		&arrowSystem{},
 		&aliveSystem{},
-		&AnimationSystem{},
+		animationSystem,
 		renderSystem,
 	}
+
+	loadSprites(animationSystem, renderSystem)
 
 	// Set background color to gray
 	a.Gls().ClearColor(0.5, 0.5, 1.0, 1.0)
@@ -238,4 +242,27 @@ func main() {
 		gui.Render()
 		pod.EndImgui()
 	})
+}
+
+func loadSprites(as *AnimationSystem, rs *renderableSystem) {
+	loadSprite("spr_Idle_strip.png", "tank/idle", 16, as, rs)
+	loadSprite("spr_Attack_strip.png", "tank/attack", 30, as, rs)
+}
+
+func loadSprite(fileName string, state string, frames int, as *AnimationSystem, rs *renderableSystem) {
+	tex1, err := texture.NewTexture2DFromImage(fileName)
+	if err != nil {
+		panic(err)
+	}
+	tex1.SetMagFilter(gls.NEAREST)
+	anim1 := texture.NewAnimator(tex1, frames, 1)
+	anim1.SetDispTime(16666 * time.Microsecond)
+	as.AddAnimation(state, anim1)
+
+	mat1 := material.NewStandard(&math32.Color{1, 1, 1})
+	mat1.AddTexture(tex1)
+	mat1.SetOpacity(1)
+	mat1.SetTransparent(true)
+	// s1 := graphic.NewSprite(17, 9.6, mat1)
+	rs.AddMaterial(state, mat1)
 }

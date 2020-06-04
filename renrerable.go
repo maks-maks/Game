@@ -4,6 +4,7 @@ import (
 	"github.com/bytearena/ecs"
 	"github.com/g3n/engine/camera"
 	"github.com/g3n/engine/core"
+	"github.com/g3n/engine/material"
 )
 
 type RenderableComponent struct {
@@ -14,8 +15,14 @@ type renderableSystem struct {
 	Scene       *core.Node
 	Camera      *camera.Camera
 	StaticNodes []core.INode
+	materials   map[string]material.IMaterial
 }
 
+func newRenderableSystem() *renderableSystem {
+	return &renderableSystem{
+		materials: make(map[string]material.IMaterial),
+	}
+}
 func (s *renderableSystem) Update(dt float32) {
 	entities := ecsManager.Query(ecs.BuildTag(renderableC, positionC))
 
@@ -40,4 +47,7 @@ func (s *renderableSystem) PopulateScene() {
 
 		s.Scene.Add(renderable.Node)
 	}
+}
+func (s *renderableSystem) AddMaterial(key string, material material.IMaterial) {
+	s.materials[key] = material
 }
