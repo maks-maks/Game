@@ -50,7 +50,7 @@ func (w sceneInspectorWidget) Build() {
 	wh := imgui.CalcTextSize("T", false, 1000)
 	top := wh.Y + imgui.CurrentStyle().FramePadding().Y*2
 	imgui.SetNextWindowPos(imgui.Vec2{X: 0, Y: top})
-	imgui.SetNextWindowSize(imgui.Vec2{X: 200, Y: ss[1] - top})
+	imgui.SetNextWindowSize(imgui.Vec2{X: 300, Y: ss[1] - top})
 
 	imgui.BeginV("SceneInspector", nil, imgui.WindowFlagsNoMove)
 
@@ -180,8 +180,8 @@ func (w componentInspector) Build() {
 	ss := w.pod.Platform.DisplaySize()
 	wh := imgui.CalcTextSize("T", false, 1000)
 	top := wh.Y + imgui.CurrentStyle().FramePadding().Y*2
-	imgui.SetNextWindowPos(imgui.Vec2{X: ss[0] - 200, Y: top})
-	imgui.SetNextWindowSize(imgui.Vec2{X: 200, Y: ss[1] - top})
+	imgui.SetNextWindowPos(imgui.Vec2{X: ss[0] - 300, Y: top})
+	imgui.SetNextWindowSize(imgui.Vec2{X: 300, Y: ss[1] - top})
 
 	imgui.BeginV("ComponentInspector", nil, imgui.WindowFlagsNoMove)
 	defer imgui.End()
@@ -242,6 +242,8 @@ func buildStructWidget(val reflect.Value) {
 			case reflect.Uint32:
 				format = stringOrDefault(format, "%d")
 				imgui.LabelText(f.Name, fmt.Sprintf("%d", vf.Interface().(ecs.EntityID)))
+			case reflect.Int:
+				imgui.LabelText(f.Name, fmt.Sprintf("%d", vf.Interface().(int)))
 			case reflect.Bool:
 				imgui.Checkbox(f.Name, vf.Addr().Interface().(*bool))
 			case reflect.Interface:

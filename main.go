@@ -5,11 +5,9 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/g3n/engine/app"
 	"github.com/g3n/engine/camera"
 	"github.com/g3n/engine/core"
 	"github.com/g3n/engine/gls"
-	"github.com/g3n/engine/gui"
 	"github.com/g3n/engine/light"
 	"github.com/g3n/engine/math32"
 	"github.com/g3n/engine/renderer"
@@ -142,19 +140,15 @@ var paused float32 = 0
 var showSpeed bool = false
 
 func main() {
-	// Create application and scene
-	a := app.App()
+	rand.Seed(int64(time.Now().Nanosecond()))
+
+	a := NewApplication(1280, 720, "game")
 
 	scene := core.NewNode()
 
-	// Set the scene to be managed by the gui manager
-	gui.Manager().Set(scene)
-
-	// Create perspective camera
 	cam := camera.New(1)
 	cam.SetPosition(0, 100, 0)
 	cam.LookAt(&math32.Vector3{0, 0, 0}, &math32.Vector3{0, 0, -1})
-	scene.Add(cam)
 
 	// Set up orbit control for the camera
 	camera.NewOrbitControl(cam)
@@ -170,39 +164,13 @@ func main() {
 	a.Subscribe(window.OnWindowSize, onResize)
 	onResize("", nil)
 
-	// // Create a blue torus and add it to the scene
-	// geom := geometry.NewTorus(1, .4, 24, 64, math32.Pi*2)
-	// // mat := material.NewStandard(math32.NewColor("DarkBlue"))
-	// mat := material.NewPhysical()
-	// mat.SetBaseColorFactor(math32.NewColor4("Blue", 1))
-	// mesh := graphic.NewMesh(geom, mat)
-	// mat.SetMetallicFactor(0.9)
-	// mat.SetRoughnessFactor(0.2)
-	// mesh.Node.SetPosition(1, 0, 0)
-	// scene.Add(mesh)
+	ambLight := light.NewAmbient(&math32.Color{1.0, 1.0, 1.0}, 1.0)
 
-	// // Create and add a button to the scene
-	// btn := gui.NewButton("Make Red")
-	// btn.SetPosition(100, 40)
-	// btn.SetSize(40, 40)
-	// btn.Subscribe(gui.OnClick, func(name string, ev interface{}) {
-	// 	mat.SetBaseColorFactor(math32.NewColor4("DarkRed", 1))
-	// })
-	// scene.Add(btn)
-
-	// Create and add lights to the scene
-	scene.Add(light.NewAmbient(&math32.Color{1.0, 1.0, 1.0}, 0.0))
-	pointLight1 := light.NewPoint(&math32.Color{1, 1, 1}, 10000.0)
+	pointLight1 := light.NewPoint(&math32.Color{1, 1, 1}, 10.0)
 	pointLight1.SetPosition(1, 20, 50)
-	scene.Add(pointLight1)
-	pointLight2 := light.NewPoint(&math32.Color{1, 1, 1}, 10000.0)
+
+	pointLight2 := light.NewPoint(&math32.Color{1, 1, 1}, 10.0)
 	pointLight2.SetPosition(1, -20, -50)
-	scene.Add(pointLight2)
-
-	// Create and add an axis helper to the scene
-	scene.Add(helper.NewAxes(0.5))
-
-	rand.Seed(int64(time.Now().Nanosecond()))
 
 	setupECS()
 	renderSystem := &renderableSystem{
@@ -210,8 +178,10 @@ func main() {
 		Camera: cam,
 		StaticNodes: []core.INode{
 			cam,
+			ambLight,
 			pointLight1,
 			pointLight2,
+			helper.NewAxes(1),
 		},
 	}
 	systems := []System{
@@ -227,33 +197,6 @@ func main() {
 		renderSystem,
 	}
 
-	go func() {
-		t := time.Now()
-		for {
-			dt := float32(time.Since(t).Milliseconds())
-			t = time.Now()
-
-			ecsManager.events.AdvanceScheduled(t)
-
-			for _, s := range systems {
-				if ep, ok := s.(interface {
-					ProcessEvents(EventBus)
-				}); ok {
-					ep.ProcessEvents(ecsManager.events)
-				}
-			}
-
-			for _, s := range systems {
-				s.Update(dt * speedMultiplier * (1 - paused))
-			}
-
-			ecsManager.events.ClearQueue()
-
-			time.Sleep(time.Duration(delayMs) * time.Millisecond)
-			// g.Update()
-		}
-	}()
-
 	// Set background color to gray
 	a.Gls().ClearColor(0.5, 0.5, 1.0, 1.0)
 
@@ -262,8 +205,31 @@ func main() {
 
 	gui := NewGUI(pod)
 
+	t := time.Now()
+
 	// Run the application
 	a.Run(func(renderer *renderer.Renderer, deltaTime time.Duration) {
+		dt := float32(time.Since(t).Milliseconds())
+		t = time.Now()
+
+		ecsManager.events.AdvanceScheduled(t)
+
+		for _, s := range systems {
+			if ep, ok := s.(interface {
+				ProcessEvents(EventBus)
+			}); ok {
+				ep.ProcessEvents(ecsManager.events)
+			}
+		}
+
+		for _, s := range systems {
+			s.Update(dt * speedMultiplier * (1 - paused))
+		}
+
+		ecsManager.events.ClearQueue()
+
+		time.Sleep(time.Duration(delayMs) * time.Millisecond)
+
 		a.Gls().Clear(gls.DEPTH_BUFFER_BIT | gls.STENCIL_BUFFER_BIT | gls.COLOR_BUFFER_BIT)
 		renderSystem.PopulateScene()
 		renderer.Render(scene, cam)
