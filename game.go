@@ -186,9 +186,9 @@ func setupECS() {
 }
 
 func createSquad(squad string, x float32, y float32) {
-	createHealer("Angel", squad, x, y)
+	// createHealer("Angel", squad, x, y)
 
-	createRanger("Legolas9", squad, x, y)
+	// createRanger("Legolas9", squad, x, y)
 
 	createTank("Frederik", squad, x, y)
 }
@@ -411,7 +411,11 @@ func (s *chasingSystem) Update(dt float32) {
 			position.YSpeed = 0
 			continue
 		}
-
+		if position.XSpeed == 0 && position.YSpeed == 0 {
+			ecsManager.events.Schedule(&WalkStartEvent{
+				EntityID: item.Entity.ID,
+			}, 0)
+		}
 		position.XSpeed = (x2 - x1) / d / 30
 		position.YSpeed = (y2 - y1) / d / 30
 	}
@@ -695,9 +699,9 @@ func (s *battleSystem) Update(dt float32) {
 		position := item.Components[positionC].(*PositionComponent)
 		state := item.Components[stateC].(*StateComponent)
 
-		if state.State == "attack" {
-			continue
-		}
+		// if state.State == "attack" {
+		// 	continue
+		// }
 
 		target := ecsManager.GetEntityByID(currentTarget.TargetID, statC, positionC, aliveC)
 		if target == nil {
@@ -743,7 +747,10 @@ func (s *battleSystem) Update(dt float32) {
 			TargetID:        target.Entity.ID,
 			Damage:          stats.Damage,
 			DamagerPosition: [2]float32{position.X, position.Y},
-		}, 100)
+		}, 0)
+		ecsManager.events.Schedule(&StopEvent{
+			EntityID: item.Entity.ID,
+		}, 2490)
 	}
 }
 
@@ -802,4 +809,19 @@ type ReviveEvent struct {
 
 func (e ReviveEvent) String() string {
 	return fmt.Sprintf("{ReviveEvent %d}", e.EntityID)
+}
+
+type WalkStartEvent struct {
+	EntityID ecs.EntityID
+}
+type StopEvent struct {
+	EntityID ecs.EntityID
+}
+
+func (e StopEvent) String() string {
+	return fmt.Sprintf("{Stop %d}", e.EntityID)
+}
+
+func (e WalkStartEvent) String() string {
+	return fmt.Sprintf("{WalkStart %d}", e.EntityID)
 }

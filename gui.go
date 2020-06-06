@@ -224,6 +224,10 @@ func buildStructWidget(val reflect.Value) {
 			vf := val.Field(i)
 			kind := ft.Kind()
 
+			if !vf.CanSet() {
+				continue
+			}
+
 			tag, ok := f.Tag.Lookup("imgui")
 			format := ""
 			if ok {

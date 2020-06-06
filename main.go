@@ -240,6 +240,7 @@ func main() {
 func loadSprites(rs *RenderSystem) {
 	loadSprite("spr_Idle_strip.png", "tank/idle", 16, rs)
 	loadSprite("spr_Attack_strip.png", "tank/attack", 30, rs)
+	loadSprite("spr_Walk_strip.png", "tank/walk", 8, rs)
 }
 
 func loadSprite(fileName string, state string, frames int, rs *RenderSystem) {
@@ -249,7 +250,7 @@ func loadSprite(fileName string, state string, frames int, rs *RenderSystem) {
 	}
 	tex1.SetMagFilter(gls.NEAREST)
 	anim1 := texture.NewAnimator(tex1, frames, 1)
-	anim1.SetDispTime(16666 * time.Microsecond)
+	anim1.SetDispTime(83 * time.Millisecond)
 	rs.AddAnimation(state, anim1)
 
 	mat1 := material.NewStandard(&math32.Color{1, 1, 1})

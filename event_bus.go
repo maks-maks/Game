@@ -33,6 +33,7 @@ func (b *EventBus) Schedule(e Event, dt int) {
 		Time:  t,
 		Event: e,
 	}
+	log = append(log, fmt.Sprintf("Scheduled after %d %s", dt, b.scheduled[0].Event))
 }
 
 func (b *EventBus) AdvanceScheduled(t time.Time) {

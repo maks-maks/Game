@@ -67,6 +67,38 @@ func (s *RenderSystem) ProcessEvents(b EventBus) {
 			sprite.AddMaterial(sprite, s.materials["tank/attack"], 0, 0)
 
 			damagerRenderable.Animation = s.animations["tank/attack"]
+		case *WalkStartEvent:
+			entity := ecsManager.GetEntityByID(event.EntityID, renderableC)
+			if entity == nil {
+				return true
+			}
+			entityRenderable := entity.Components[renderableC].(*RenderableComponent)
+
+			sprite, ok := entityRenderable.Node.GetINode().(*graphic.Sprite)
+			if !ok {
+				return true
+			}
+
+			sprite.ClearMaterials()
+			sprite.AddMaterial(sprite, s.materials["tank/walk"], 0, 0)
+
+			entityRenderable.Animation = s.animations["tank/walk"]
+		case *StopEvent:
+			entity := ecsManager.GetEntityByID(event.EntityID, renderableC)
+			if entity == nil {
+				return true
+			}
+			entityRenderable := entity.Components[renderableC].(*RenderableComponent)
+
+			sprite, ok := entityRenderable.Node.GetINode().(*graphic.Sprite)
+			if !ok {
+				return true
+			}
+
+			sprite.ClearMaterials()
+			sprite.AddMaterial(sprite, s.materials["tank/idle"], 0, 0)
+
+			entityRenderable.Animation = s.animations["tank/idle"]
 		}
 		return true
 	})
