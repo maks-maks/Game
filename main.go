@@ -209,18 +209,20 @@ func main() {
 		dt := float32(time.Since(t).Milliseconds())
 		t = time.Now()
 
-		ecsManager.events.AdvanceScheduled(t)
+		effectiveDt := dt * speedMultiplier * (1 - paused)
+
+		ecsManager.events.AdvanceScheduled(effectiveDt)
 
 		for _, s := range systems {
 			if ep, ok := s.(interface {
 				ProcessEvents(EventBus)
 			}); ok {
-				ep.ProcessEvents(ecsManager.events)
+				ep.ProcessEvents(*ecsManager.events)
 			}
 		}
 
 		for _, s := range systems {
-			s.Update(dt * speedMultiplier * (1 - paused))
+			s.Update(effectiveDt)
 		}
 
 		ecsManager.events.ClearQueue()

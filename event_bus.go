@@ -1,50 +1,48 @@
 package main
 
 import (
+	"container/heap"
 	"fmt"
 	"time"
 )
 
 type EventBus struct {
 	queue     []Event
-	scheduled []TimedEvent
+	scheduled *EventPriorityQueue
+	curTime   float32
+}
+
+func NewEventBus() *EventBus {
+	epq := &EventPriorityQueue{}
+	heap.Init(epq)
+
+	return &EventBus{
+		scheduled: epq,
+	}
 }
 
 func (b *EventBus) Publish(e Event) {
-	log = append(log, fmt.Sprintf("Event %s", e))
-	b.queue = append(b.queue, e)
+	b.Schedule(e, 0)
 }
 
-func (b *EventBus) Schedule(e Event, dt int) {
-	// find an index to insert
-	insertIndex := 0
-	t := time.Now().Add(time.Duration(dt) * time.Millisecond)
-	for i, item := range b.scheduled {
-		if item.Time.After(t) {
-			insertIndex = i
-			break
-		}
-	}
-
-	// insert at proper place
-	b.scheduled = append(b.scheduled, TimedEvent{})
-	copy(b.scheduled[insertIndex+1:], b.scheduled[insertIndex:])
-	b.scheduled[insertIndex] = TimedEvent{
-		Time:  t,
+func (b *EventBus) Schedule(e Event, dt float32) {
+	heap.Push(b.scheduled, &TimedEvent{
+		Time:  b.curTime + dt,
 		Event: e,
-	}
-	log = append(log, fmt.Sprintf("Scheduled after %d %s", dt, b.scheduled[0].Event))
+	})
+	log = append(log, fmt.Sprintf("Scheduled after %v %s", time.Duration(int(dt))*time.Millisecond, e))
 }
 
-func (b *EventBus) AdvanceScheduled(t time.Time) {
-	for _, item := range b.scheduled {
-		if item.Time.Before(t) {
-			log = append(log, fmt.Sprintf("%s", b.scheduled[0].Event))
-			b.queue = append(b.queue, b.scheduled[0].Event)
-			b.scheduled = b.scheduled[1:]
-		} else {
+func (b *EventBus) AdvanceScheduled(dt float32) {
+	b.curTime += dt
+	for len(*b.scheduled) > 0 {
+		if (*b.scheduled)[0].Time > b.curTime {
 			break
 		}
+
+		v := heap.Pop(b.scheduled).(*TimedEvent)
+		log = append(log, fmt.Sprintf("%s", v.Event))
+		b.queue = append(b.queue, v.Event)
 	}
 }
 
@@ -63,5 +61,31 @@ type Event interface{}
 
 type TimedEvent struct {
 	Event Event
-	Time  time.Time
+	Time  float32
+}
+
+type EventPriorityQueue []*TimedEvent
+
+func (pq EventPriorityQueue) Len() int {
+	return len(pq)
+}
+
+func (pq EventPriorityQueue) Less(i, j int) bool {
+	return pq[i].Time <= pq[j].Time
+}
+
+func (pq EventPriorityQueue) Swap(i, j int) {
+	pq[i], pq[j] = pq[j], pq[i]
+}
+
+func (pq *EventPriorityQueue) Push(x interface{}) {
+	*pq = append(*pq, x.(*TimedEvent))
+}
+
+func (pq *EventPriorityQueue) Pop() interface{} {
+	old := *pq
+	n := len(old)
+	x := old[n-1]
+	*pq = old[0 : n-1]
+	return x
 }

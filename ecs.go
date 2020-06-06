@@ -11,7 +11,7 @@ var ecsManager *ECSManager
 
 type ECSManager struct {
 	ecs.Manager
-	events       EventBus
+	events       *EventBus
 	components   []*ecs.Component
 	componentMap map[string]*ecs.Component
 	nameMap      map[*ecs.Component]string
@@ -24,6 +24,7 @@ func NewECSManager() *ECSManager {
 		componentMap: make(map[string]*ecs.Component),
 		nameMap:      make(map[*ecs.Component]string),
 		type2comp:    make(map[reflect.Type]*ecs.Component),
+		events:       NewEventBus(),
 	}
 }
 
