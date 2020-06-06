@@ -4,15 +4,12 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
-	"time"
 
 	"github.com/bytearena/ecs"
 	"github.com/g3n/engine/geometry"
-	"github.com/g3n/engine/gls"
 	"github.com/g3n/engine/graphic"
 	"github.com/g3n/engine/material"
 	"github.com/g3n/engine/math32"
-	"github.com/g3n/engine/texture"
 )
 
 type Ability interface {
@@ -171,12 +168,11 @@ func setupECS() {
 	arrowC = ecsManager.RegisterComponent("arrow", &ArrowComponent{})
 	stateC = ecsManager.RegisterComponent("state", &StateComponent{})
 	renderableC = ecsManager.RegisterComponent("renderable", &RenderableComponent{})
-	animationC = ecsManager.RegisterComponent("animation", &AnimationComponent{})
 	//createTank("Frederik", "a", 100, 100)
 	//createRanger("Legolas", "b", 400, 400)
 	// for i := 1; i < 5; i++ {
-	createSquad("Geroi", 200, 200)
-	createSquad("Sandali", -200, -200)
+	// createSquad("Geroi", 200, 200)
+	// createSquad("Sandali", -200, -200)
 	//createSquad("Angels", 400, 100)
 	//createSquad("Daemons", 100, 400)
 	// createTank("Frederik", "Sandali", 100, 100)
@@ -299,25 +295,26 @@ func createTank(n string, squad string, x float32, y float32) *ecs.Entity {
 		State: "idle",
 	})
 
-	tex1, err := texture.NewTexture2DFromImage("spr_idle_strip.png")
-	if err != nil {
-		panic(err)
-	}
-	tex1.SetMagFilter(gls.NEAREST)
-	anim1 := texture.NewAnimator(tex1, 16, 1)
-	anim1.SetDispTime(16666 * time.Microsecond)
-	ecsManager.AddComponent(e, &AnimationComponent{
-		Object: anim1,
-	})
+	// tex1, err := texture.NewTexture2DFromImage("spr_idle_strip.png")
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// tex1.SetMagFilter(gls.NEAREST)
+	// anim1 := texture.NewAnimator(tex1, 16, 1)
+	// anim1.SetDispTime(16666 * time.Microsecond)
+	// ecsManager.AddComponent(e, &AnimationComponent{
+	// 	Object: anim1,
+	// })
 
-	mat1 := material.NewStandard(&math32.Color{1, 1, 1})
-	mat1.AddTexture(tex1)
-	mat1.SetOpacity(1)
-	mat1.SetTransparent(true)
-	s1 := graphic.NewSprite(17, 9.6, mat1)
+	// mat1 := material.NewStandard(&math32.Color{1, 1, 1})
+	// mat1.AddTexture(tex1)
+	// mat1.SetOpacity(1)
+	// mat1.SetTransparent(true)
+	s1 := graphic.NewSprite(17, 9.6, renderSystem.materials["tank/idle"])
 
 	ecsManager.AddComponent(e, &RenderableComponent{
-		Node: s1,
+		Node:      s1,
+		Animation: renderSystem.animations["tank/idle"],
 	})
 	ecsManager.AddComponent(e, &PositionComponent{
 		X: x + rand.Float32()*200 - 100,

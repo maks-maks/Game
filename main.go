@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"math/rand"
 	"time"
 
@@ -26,14 +25,6 @@ type PositionComponent struct {
 	XSpeed float32
 	YSpeed float32
 	Debug  string
-}
-
-func renderSystem() {
-	entities := ecsManager.Query(0).Entities()
-
-	for _, v := range entities {
-		fmt.Println(v)
-	}
 }
 
 // func gameCanvas() *g.Layout {
@@ -140,6 +131,7 @@ func renderSystem() {
 var speedMultiplier float32 = 1
 var paused float32 = 0
 var showSpeed bool = false
+var renderSystem *RenderSystem
 
 func main() {
 	rand.Seed(int64(time.Now().Nanosecond()))
@@ -175,7 +167,7 @@ func main() {
 	pointLight2.SetPosition(1, -20, -50)
 
 	setupECS()
-	renderSystem := newRenderableSystem()
+	renderSystem = NewRenderSystem()
 	renderSystem.Scene = scene
 	renderSystem.Camera = cam
 	renderSystem.StaticNodes = []core.INode{
@@ -185,7 +177,6 @@ func main() {
 		pointLight2,
 		helper.NewAxes(1),
 	}
-	animationSystem := newAnimationSystem()
 	systems := []System{
 		&targetingSystem{},
 		&chasingSystem{},
@@ -195,11 +186,10 @@ func main() {
 		&dodgeSystem{},
 		&arrowSystem{},
 		&aliveSystem{},
-		animationSystem,
 		renderSystem,
 	}
 
-	loadSprites(animationSystem, renderSystem)
+	loadSprites(renderSystem)
 
 	// Set background color to gray
 	a.Gls().ClearColor(0.5, 0.5, 1.0, 1.0)
@@ -208,6 +198,9 @@ func main() {
 	pod := imguipod.New(glfwWindow)
 
 	gui := NewGUI(pod)
+
+	createSquad("Geroi", 200, 200)
+	createSquad("Sandali", -200, -200)
 
 	t := time.Now()
 
@@ -244,12 +237,12 @@ func main() {
 	})
 }
 
-func loadSprites(as *AnimationSystem, rs *renderableSystem) {
-	loadSprite("spr_Idle_strip.png", "tank/idle", 16, as, rs)
-	loadSprite("spr_Attack_strip.png", "tank/attack", 30, as, rs)
+func loadSprites(rs *RenderSystem) {
+	loadSprite("spr_Idle_strip.png", "tank/idle", 16, rs)
+	loadSprite("spr_Attack_strip.png", "tank/attack", 30, rs)
 }
 
-func loadSprite(fileName string, state string, frames int, as *AnimationSystem, rs *renderableSystem) {
+func loadSprite(fileName string, state string, frames int, rs *RenderSystem) {
 	tex1, err := texture.NewTexture2DFromImage(fileName)
 	if err != nil {
 		panic(err)
@@ -257,7 +250,7 @@ func loadSprite(fileName string, state string, frames int, as *AnimationSystem, 
 	tex1.SetMagFilter(gls.NEAREST)
 	anim1 := texture.NewAnimator(tex1, frames, 1)
 	anim1.SetDispTime(16666 * time.Microsecond)
-	as.AddAnimation(state, anim1)
+	rs.AddAnimation(state, anim1)
 
 	mat1 := material.NewStandard(&math32.Color{1, 1, 1})
 	mat1.AddTexture(tex1)
