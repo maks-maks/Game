@@ -599,8 +599,9 @@ func (s *aliveSystem) ProcessEvents(b EventBus) {
 				target.Entity.AddComponent(deadC, &DeadComponent{})
 
 				ecsManager.events.Schedule(&DeathEvent{
-					EntityID: target.Entity.ID,
-				}, 0)
+					EntityID:  target.Entity.ID,
+					DamagerID: event.DamagerID,
+				}, 1000)
 			}
 		case *ReviveEvent:
 			target := ecsManager.GetEntityByID(event.EntityID, statC, deadC, stateC)
@@ -777,7 +778,8 @@ func (e HealEvent) String() string {
 }
 
 type DeathEvent struct {
-	EntityID ecs.EntityID
+	EntityID  ecs.EntityID
+	DamagerID ecs.EntityID
 }
 
 func (e DeathEvent) String() string {

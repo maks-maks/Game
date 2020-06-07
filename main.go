@@ -245,6 +245,7 @@ func loadSprites(rs *RenderSystem) {
 	loadSprite("spr_Attack_strip.png", "tank/attack", 30, rs)
 	loadSprite("spr_Walk_strip.png", "tank/walk", 8, rs)
 	loadSprite("spr_Death_strip.png", "tank/death", 40, rs)
+	loadSprite("spr_Taunt_strip.png", "tank/taunt", 18, rs)
 	rs.animations["tank/death"].(*TextureAnimator).MaxCycles = 1
 }
 

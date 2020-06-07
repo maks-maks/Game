@@ -63,6 +63,7 @@ func (s *RenderSystem) ProcessEvents(b EventBus) {
 			s.startAnimation(event.EntityID, "tank/idle")
 		case *DeathEvent:
 			s.startAnimation(event.EntityID, "tank/death")
+			s.startAnimation(event.DamagerID, "tank/taunt")
 		}
 		return true
 	})
