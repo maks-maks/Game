@@ -8,7 +8,6 @@ import (
 	"github.com/g3n/engine/core"
 	"github.com/g3n/engine/gls"
 	"github.com/g3n/engine/light"
-	"github.com/g3n/engine/material"
 	"github.com/g3n/engine/math32"
 	"github.com/g3n/engine/renderer"
 	"github.com/g3n/engine/texture"
@@ -250,20 +249,14 @@ func loadSprites(rs *RenderSystem) {
 }
 
 func loadSprite(fileName string, state string, frames int, rs *RenderSystem) {
-	tex1, err := texture.NewTexture2DFromImage(fileName)
+	tex, err := texture.NewTexture2DFromImage(fileName)
 	if err != nil {
 		panic(err)
 	}
-	tex1.SetMagFilter(gls.NEAREST)
-	// anim1 := texture.NewAnimator(tex1, frames, 1)
-	anim1 := NewTextureAnimator(tex1, frames, 1)
-	anim1.DispTime = 83
-	rs.AddAnimation(state, anim1)
+	tex.SetMagFilter(gls.NEAREST)
+	rs.AddTexture(state, tex)
 
-	mat1 := material.NewStandard(&math32.Color{1, 1, 1})
-	mat1.AddTexture(tex1)
-	mat1.SetOpacity(1)
-	mat1.SetTransparent(true)
-	// s1 := graphic.NewSprite(17, 9.6, mat1)
-	rs.AddMaterial(state, mat1)
+	anim := NewTextureAnimator(tex, frames, 1)
+	anim.DispTime = 83
+	rs.AddAnimation(state, anim)
 }

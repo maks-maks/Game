@@ -6,6 +6,8 @@ import (
 	"github.com/g3n/engine/core"
 	"github.com/g3n/engine/graphic"
 	"github.com/g3n/engine/material"
+	"github.com/g3n/engine/math32"
+	"github.com/g3n/engine/texture"
 )
 
 type Animatable interface {
@@ -23,14 +25,16 @@ type RenderSystem struct {
 	Scene       *core.Node
 	Camera      *camera.Camera
 	StaticNodes []core.INode
-	materials   map[string]material.IMaterial
 	animations  map[string]Animatable
+	textures    map[string]*texture.Texture2D
+	defaultMat  material.IMaterial
 }
 
 func NewRenderSystem() *RenderSystem {
 	return &RenderSystem{
-		materials:  make(map[string]material.IMaterial),
 		animations: make(map[string]Animatable),
+		textures:   make(map[string]*texture.Texture2D),
+		defaultMat: material.NewStandard(&math32.Color{1, 1, 1}),
 	}
 }
 
@@ -42,8 +46,15 @@ func (s *RenderSystem) Update(dt float32) {
 		position := item.Components[positionC].(*PositionComponent)
 
 		renderable.Node.GetNode().SetPosition(position.X/10, 0, position.Y/10)
-		if renderable.Animation != nil {
-			renderable.Animation.Update(dt)
+
+		if sprite, ok := renderable.Node.GetINode().(*graphic.Sprite); ok {
+			for _, gm := range sprite.Materials() {
+				if updater, ok2 := gm.IMaterial().(interface {
+					Update(float32)
+				}); ok2 {
+					updater.Update(dt)
+				}
+			}
 		}
 	}
 }
@@ -77,16 +88,24 @@ func (s *RenderSystem) startAnimation(id ecs.EntityID, anim string) {
 	}
 	renderable := damager.Components[renderableC].(*RenderableComponent)
 
+	renderable.Animation = s.animations[anim].Clone().(Animatable)
+	renderable.Animation.Reset()
+
 	sprite, ok := renderable.Node.GetINode().(*graphic.Sprite)
 	if !ok {
 		return
 	}
 
 	sprite.ClearMaterials()
-	sprite.AddMaterial(sprite, s.materials[anim], 0, 0)
 
-	renderable.Animation = s.animations[anim].Clone().(Animatable)
-	renderable.Animation.Reset()
+	mat := material.NewStandard(&math32.Color{1, 1, 1})
+	mat.AddTexture(s.textures[anim])
+	mat.SetOpacity(1)
+	mat.SetTransparent(true)
+	sprite.AddMaterial(sprite, &AnimatedMaterial{
+		IMaterial: mat,
+		Animation: renderable.Animation.(UpdaterRenderSetuper),
+	}, 0, 0)
 }
 
 func (s *RenderSystem) PopulateScene() {
@@ -103,10 +122,11 @@ func (s *RenderSystem) PopulateScene() {
 		s.Scene.Add(renderable.Node)
 	}
 }
-func (s *RenderSystem) AddMaterial(key string, material material.IMaterial) {
-	s.materials[key] = material
-}
 
 func (s *RenderSystem) AddAnimation(key string, a Animatable) {
 	s.animations[key] = a
+}
+
+func (s *RenderSystem) AddTexture(key string, texture *texture.Texture2D) {
+	s.textures[key] = texture
 }

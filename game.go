@@ -295,7 +295,7 @@ func createTank(n string, squad string, x float32, y float32) *ecs.Entity {
 		State: "idle",
 	})
 
-	s1 := graphic.NewSprite(17, 9.6, renderSystem.materials["tank/idle"])
+	s1 := graphic.NewSprite(17, 9.6, renderSystem.defaultMat)
 
 	ecsManager.AddComponent(e, &RenderableComponent{
 		Node:      s1,

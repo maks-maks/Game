@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/g3n/engine/gls"
+	"github.com/g3n/engine/material"
 	"github.com/g3n/engine/math32"
 	"github.com/g3n/engine/texture"
 )
@@ -68,7 +69,6 @@ func (a *TextureAnimator) Update(dt float32) {
 		dFrame := math32.Floor(a.TileDisplayed / a.DispTime)
 		a.TileDisplayed -= a.DispTime * dFrame
 
-		// dCycle := math32.Floor(dFrame / (float32(a.Rows * a.Columns)))
 		dCycle := (a.Index + int(dFrame)) / (a.Rows * a.Columns)
 		a.Cycles += dCycle
 		a.Index = (a.Index + int(dFrame)) % (a.Rows * a.Columns)
@@ -77,9 +77,38 @@ func (a *TextureAnimator) Update(dt float32) {
 			a.Index = a.Rows*a.Columns - 1
 		}
 	}
+}
 
+func (a *TextureAnimator) RenderSetup(gs *gls.GLS) {
 	iRow := a.Index / a.Columns
 	iCol := a.Index % a.Columns
 
 	a.Tex.SetOffset(float32(iCol)/float32(a.Columns), float32(iRow)/float32(a.Rows))
+}
+
+type UpdaterRenderSetuper interface {
+	RenderSetup(*gls.GLS)
+	Update(float32)
+}
+
+type AnimatedMaterial struct {
+	material.IMaterial
+	Animation UpdaterRenderSetuper
+}
+
+func (m *AnimatedMaterial) GetMaterial() *material.Material {
+	return m.IMaterial.GetMaterial()
+}
+
+func (m *AnimatedMaterial) RenderSetup(gs *gls.GLS) {
+	m.Animation.RenderSetup(gs)
+	m.IMaterial.RenderSetup(gs)
+}
+
+func (m *AnimatedMaterial) Dispose() {
+	m.GetMaterial().Dispose()
+}
+
+func (m *AnimatedMaterial) Update(dt float32) {
+	m.Animation.Update(dt)
 }
