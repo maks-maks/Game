@@ -52,59 +52,40 @@ func (s *RenderSystem) ProcessEvents(b EventBus) {
 	b.Iterate(func(e Event) bool {
 		switch event := e.(type) {
 		case *HitEvent:
-			damager := ecsManager.GetEntityByID(event.DamagerID, renderableC)
+			s.startAnimation(event.DamagerID, "tank/attack")
+		case *WalkStartEvent:
+			s.startAnimation(event.EntityID, "tank/walk")
+		case *StopEvent:
+			damager := ecsManager.GetEntityByID(event.EntityID, aliveC)
 			if damager == nil {
 				return true
 			}
-			damagerRenderable := damager.Components[renderableC].(*RenderableComponent)
-
-			sprite, ok := damagerRenderable.Node.GetINode().(*graphic.Sprite)
-			if !ok {
-				return true
-			}
-
-			sprite.ClearMaterials()
-			sprite.AddMaterial(sprite, s.materials["tank/attack"], 0, 0)
-
-			damagerRenderable.Animation = s.animations["tank/attack"].Clone().(Animatable)
-			damagerRenderable.Animation.Reset()
-		case *WalkStartEvent:
-			entity := ecsManager.GetEntityByID(event.EntityID, renderableC)
-			if entity == nil {
-				return true
-			}
-			entityRenderable := entity.Components[renderableC].(*RenderableComponent)
-
-			sprite, ok := entityRenderable.Node.GetINode().(*graphic.Sprite)
-			if !ok {
-				return true
-			}
-
-			sprite.ClearMaterials()
-			sprite.AddMaterial(sprite, s.materials["tank/walk"], 0, 0)
-
-			entityRenderable.Animation = s.animations["tank/walk"].Clone().(Animatable)
-			entityRenderable.Animation.Reset()
-		case *StopEvent:
-			entity := ecsManager.GetEntityByID(event.EntityID, renderableC)
-			if entity == nil {
-				return true
-			}
-			entityRenderable := entity.Components[renderableC].(*RenderableComponent)
-
-			sprite, ok := entityRenderable.Node.GetINode().(*graphic.Sprite)
-			if !ok {
-				return true
-			}
-
-			sprite.ClearMaterials()
-			sprite.AddMaterial(sprite, s.materials["tank/idle"], 0, 0)
-
-			entityRenderable.Animation = s.animations["tank/idle"].Clone().(Animatable)
-			entityRenderable.Animation.Reset()
+			s.startAnimation(event.EntityID, "tank/idle")
+		case *DeathEvent:
+			s.startAnimation(event.EntityID, "tank/death")
 		}
 		return true
 	})
+
+}
+
+func (s *RenderSystem) startAnimation(id ecs.EntityID, anim string) {
+	damager := ecsManager.GetEntityByID(id, renderableC)
+	if damager == nil {
+		return
+	}
+	renderable := damager.Components[renderableC].(*RenderableComponent)
+
+	sprite, ok := renderable.Node.GetINode().(*graphic.Sprite)
+	if !ok {
+		return
+	}
+
+	sprite.ClearMaterials()
+	sprite.AddMaterial(sprite, s.materials[anim], 0, 0)
+
+	renderable.Animation = s.animations[anim].Clone().(Animatable)
+	renderable.Animation.Reset()
 }
 
 func (s *RenderSystem) PopulateScene() {

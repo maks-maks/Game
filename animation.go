@@ -68,9 +68,14 @@ func (a *TextureAnimator) Update(dt float32) {
 		dFrame := math32.Floor(a.TileDisplayed / a.DispTime)
 		a.TileDisplayed -= a.DispTime * dFrame
 
-		dCycle := math32.Floor(dFrame / (float32(a.Rows * a.Columns)))
-		a.Cycles += int(dCycle)
+		// dCycle := math32.Floor(dFrame / (float32(a.Rows * a.Columns)))
+		dCycle := (a.Index + int(dFrame)) / (a.Rows * a.Columns)
+		a.Cycles += dCycle
 		a.Index = (a.Index + int(dFrame)) % (a.Rows * a.Columns)
+
+		if a.MaxCycles > 0 && a.Cycles >= a.MaxCycles {
+			a.Index = a.Rows*a.Columns - 1
+		}
 	}
 
 	iRow := a.Index / a.Columns
