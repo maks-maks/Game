@@ -636,7 +636,7 @@ func (s *battleSystem) ProcessEvents(b EventBus) {
 	b.Iterate(func(e Event) bool {
 		switch event := e.(type) {
 		case *HitEvent:
-			target := ecsManager.GetEntityByID(event.TargetID, statC, positionC, aliveC, stateC)
+			target := ecsManager.GetEntityByID(event.TargetID, statC, positionC, aliveC)
 			if target == nil {
 				return true
 			}
@@ -665,9 +665,6 @@ func (s *battleSystem) ProcessEvents(b EventBus) {
 				TargetID:  target.Entity.ID,
 				Damage:    event.Damage,
 			}, 0)
-
-			targetState := target.Components[stateC].(*StateComponent)
-			targetState.State = "idle"
 		case *HealEvent:
 			healer := ecsManager.GetEntityByID(event.HealerID, statC, positionC, aliveC, stateC)
 			if healer == nil {
@@ -697,7 +694,6 @@ func (s *battleSystem) Update(dt float32) {
 		currentTarget := item.Components[targetC].(*TargetComponent)
 		stats := item.Components[statC].(*StatsComponent)
 		position := item.Components[positionC].(*PositionComponent)
-		state := item.Components[stateC].(*StateComponent)
 
 		// if state.State == "attack" {
 		// 	continue
@@ -741,7 +737,6 @@ func (s *battleSystem) Update(dt float32) {
 			continue
 		}
 
-		state.State = "attack"
 		ecsManager.events.Schedule(&HitEvent{
 			DamagerID:       item.Entity.ID,
 			TargetID:        target.Entity.ID,

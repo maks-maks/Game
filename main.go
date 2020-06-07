@@ -178,6 +178,7 @@ func main() {
 		helper.NewAxes(1),
 	}
 	systems := []System{
+		&StateSystem{},
 		&targetingSystem{},
 		&chasingSystem{},
 		&movementSystem{},
