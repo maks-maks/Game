@@ -252,8 +252,9 @@ func loadSprite(fileName string, state string, frames int, rs *RenderSystem) {
 		panic(err)
 	}
 	tex1.SetMagFilter(gls.NEAREST)
-	anim1 := texture.NewAnimator(tex1, frames, 1)
-	anim1.SetDispTime(83 * time.Millisecond)
+	// anim1 := texture.NewAnimator(tex1, frames, 1)
+	anim1 := NewTextureAnimator(tex1, frames, 1)
+	anim1.DispTime = 83
 	rs.AddAnimation(state, anim1)
 
 	mat1 := material.NewStandard(&math32.Color{1, 1, 1})

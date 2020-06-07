@@ -1,8 +1,6 @@
 package main
 
 import (
-	"time"
-
 	"github.com/bytearena/ecs"
 	"github.com/g3n/engine/camera"
 	"github.com/g3n/engine/core"
@@ -11,7 +9,9 @@ import (
 )
 
 type Animatable interface {
-	Update(time.Time)
+	Update(dt float32)
+	Clone() interface{}
+	Reset()
 }
 
 type RenderableComponent struct {
@@ -43,7 +43,7 @@ func (s *RenderSystem) Update(dt float32) {
 
 		renderable.Node.GetNode().SetPosition(position.X/10, 0, position.Y/10)
 		if renderable.Animation != nil {
-			renderable.Animation.Update(time.Now())
+			renderable.Animation.Update(dt)
 		}
 	}
 }
@@ -66,7 +66,8 @@ func (s *RenderSystem) ProcessEvents(b EventBus) {
 			sprite.ClearMaterials()
 			sprite.AddMaterial(sprite, s.materials["tank/attack"], 0, 0)
 
-			damagerRenderable.Animation = s.animations["tank/attack"]
+			damagerRenderable.Animation = s.animations["tank/attack"].Clone().(Animatable)
+			damagerRenderable.Animation.Reset()
 		case *WalkStartEvent:
 			entity := ecsManager.GetEntityByID(event.EntityID, renderableC)
 			if entity == nil {
@@ -82,7 +83,8 @@ func (s *RenderSystem) ProcessEvents(b EventBus) {
 			sprite.ClearMaterials()
 			sprite.AddMaterial(sprite, s.materials["tank/walk"], 0, 0)
 
-			entityRenderable.Animation = s.animations["tank/walk"]
+			entityRenderable.Animation = s.animations["tank/walk"].Clone().(Animatable)
+			entityRenderable.Animation.Reset()
 		case *StopEvent:
 			entity := ecsManager.GetEntityByID(event.EntityID, renderableC)
 			if entity == nil {
@@ -98,7 +100,8 @@ func (s *RenderSystem) ProcessEvents(b EventBus) {
 			sprite.ClearMaterials()
 			sprite.AddMaterial(sprite, s.materials["tank/idle"], 0, 0)
 
-			entityRenderable.Animation = s.animations["tank/idle"]
+			entityRenderable.Animation = s.animations["tank/idle"].Clone().(Animatable)
+			entityRenderable.Animation.Reset()
 		}
 		return true
 	})
