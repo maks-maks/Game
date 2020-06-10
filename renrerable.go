@@ -19,6 +19,7 @@ type Animatable interface {
 type RenderableComponent struct {
 	Node      core.INode
 	Animation Animatable
+	Base      string
 }
 
 type RenderSystem struct {
@@ -63,18 +64,18 @@ func (s *RenderSystem) ProcessEvents(b EventBus) {
 	b.Iterate(func(e Event) bool {
 		switch event := e.(type) {
 		case *HitEvent:
-			s.startAnimation(event.DamagerID, "tank/attack")
+			s.startAnimation(event.DamagerID, "attack")
 		case *WalkStartEvent:
-			s.startAnimation(event.EntityID, "tank/walk")
+			s.startAnimation(event.EntityID, "walk")
 		case *StopEvent:
 			damager := ecsManager.GetEntityByID(event.EntityID, aliveC)
 			if damager == nil {
 				return true
 			}
-			s.startAnimation(event.EntityID, "tank/idle")
+			s.startAnimation(event.EntityID, "idle")
 		case *DeathEvent:
-			s.startAnimation(event.EntityID, "tank/death")
-			s.startAnimation(event.DamagerID, "tank/taunt")
+			s.startAnimation(event.EntityID, "death")
+			s.startAnimation(event.DamagerID, "taunt")
 		}
 		return true
 	})
@@ -87,6 +88,8 @@ func (s *RenderSystem) startAnimation(id ecs.EntityID, anim string) {
 		return
 	}
 	renderable := damager.Components[renderableC].(*RenderableComponent)
+
+	anim = renderable.Base + "/" + anim
 
 	renderable.Animation = s.animations[anim].Clone().(Animatable)
 	renderable.Animation.Reset()

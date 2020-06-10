@@ -188,7 +188,7 @@ func setupECS() {
 func createSquad(squad string, x float32, y float32) {
 	// createHealer("Angel", squad, x, y)
 
-	// createRanger("Legolas9", squad, x, y)
+	createRanger("Legolas", squad, x, y)
 
 	createTank("Frederik", squad, x, y)
 }
@@ -246,14 +246,14 @@ func createRanger(n string, squad string, x float32, y float32) *ecs.Entity {
 	ecsManager.AddComponent(e, &StateComponent{
 		State: "idle",
 	})
-	geom := geometry.NewCylinder(1, 2, 24, 2, true, true)
-	mat := material.NewPhysical()
-	mat.SetBaseColorFactor(math32.NewColor4("Blue", 1))
-	mesh := graphic.NewMesh(geom, mat)
-	mesh.SetRotation(-math32.Pi/2, 0, 0)
+
+	s1 := graphic.NewSprite(13, 13, renderSystem.defaultMat)
 	ecsManager.AddComponent(e, &RenderableComponent{
-		Node: mesh,
+		Node:      s1,
+		Animation: renderSystem.animations["ranger/idle"],
+		Base:      "ranger",
 	})
+
 	ecsManager.AddComponent(e, &PositionComponent{
 		X: x + rand.Float32()*200 - 100,
 		Y: y + rand.Float32()*200 - 100,
@@ -275,7 +275,7 @@ func createRanger(n string, squad string, x float32, y float32) *ecs.Entity {
 		MaxHealth:   200,
 		Health:      200,
 		Damage:      20,
-		Cooldown:    400,
+		Cooldown:    1400,
 		Stamina:     100,
 		StaminaCost: 20,
 		Dodge:       30,
@@ -296,10 +296,10 @@ func createTank(n string, squad string, x float32, y float32) *ecs.Entity {
 	})
 
 	s1 := graphic.NewSprite(17, 9.6, renderSystem.defaultMat)
-
 	ecsManager.AddComponent(e, &RenderableComponent{
 		Node:      s1,
 		Animation: renderSystem.animations["tank/idle"],
+		Base:      "tank",
 	})
 
 	ecsManager.AddComponent(e, &PositionComponent{
@@ -409,6 +409,16 @@ func (s *chasingSystem) Update(dt float32) {
 
 type arrowSystem struct{}
 
+func (s *arrowSystem) ProcessEvents(b EventBus) {
+	b.Iterate(func(e Event) bool {
+		switch event := e.(type) {
+		case *CreateArrowEvent:
+			createArrow(event.DamagerID, event.TargetID, event.X1, event.Y1, event.Damage, event.X2, event.Y2)
+		}
+		return true
+	})
+}
+
 func (s *arrowSystem) Update(dt float32) {
 	query := ecsManager.Query(ecs.BuildTag(targetC, positionC, arrowC))
 	for _, item := range query {
@@ -445,7 +455,7 @@ func (s *arrowSystem) Update(dt float32) {
 				continue
 			}
 
-			ecsManager.events.Schedule(&HitEvent{
+			ecsManager.events.Schedule(&DamageEvent{
 				DamagerID: arrow.DamagerID,
 				TargetID:  target.Entity.ID,
 				Damage:    arrow.Damage,
@@ -720,7 +730,25 @@ func (s *battleSystem) Update(dt float32) {
 		}
 
 		if stats.AttackRange > 75 {
-			createArrow(item.Entity.ID, target.Entity.ID, position.X, position.Y, stats.Damage, targetPosition.X, targetPosition.Y)
+			ecsManager.events.Schedule(&HitEvent{
+				DamagerID:       item.Entity.ID,
+				TargetID:        target.Entity.ID,
+				Damage:          stats.Damage,
+				DamagerPosition: [2]float32{position.X, position.Y},
+			}, 0)
+			ecsManager.events.Schedule(&CreateArrowEvent{
+				DamagerID: item.Entity.ID,
+				TargetID:  target.Entity.ID,
+				Damage:    stats.Damage,
+				X1:        position.X,
+				Y1:        position.Y,
+				X2:        targetPosition.X,
+				Y2:        targetPosition.Y,
+			}, 747)
+			ecsManager.events.Schedule(&StopEvent{
+				EntityID: item.Entity.ID,
+			}, 1162)
+
 			continue
 		}
 
@@ -807,4 +835,18 @@ func (e StopEvent) String() string {
 
 func (e WalkStartEvent) String() string {
 	return fmt.Sprintf("{WalkStart %d}", e.EntityID)
+}
+
+type CreateArrowEvent struct {
+	DamagerID ecs.EntityID
+	TargetID  ecs.EntityID
+	Damage    int32
+	X1        float32
+	Y1        float32
+	X2        float32
+	Y2        float32
+}
+
+func (e CreateArrowEvent) String() string {
+	return fmt.Sprintf("{CreateArrow %d %d %d}", e.DamagerID, e.TargetID, e.Damage)
 }

@@ -246,6 +246,13 @@ func loadSprites(rs *RenderSystem) {
 	loadSprite("spr_Death_strip.png", "tank/death", 40, rs)
 	loadSprite("spr_Taunt_strip.png", "tank/taunt", 18, rs)
 	rs.animations["tank/death"].(*TextureAnimator).MaxCycles = 1
+
+	loadSprite("spr_ArcherIdle_strip.png", "ranger/idle", 8, rs)
+	loadSprite("spr_ArcherRun_strip.png", "ranger/walk", 8, rs)
+	loadSprite("spr_ArcherAttack_strip.png", "ranger/attack", 14, rs)
+	loadSprite("spr_ArcherDeath_strip.png", "ranger/death", 24, rs)
+	loadSprite("spr_ArcherIdle_strip.png", "ranger/taunt", 8, rs)
+	rs.animations["ranger/death"].(*TextureAnimator).MaxCycles = 1
 }
 
 func loadSprite(fileName string, state string, frames int, rs *RenderSystem) {
